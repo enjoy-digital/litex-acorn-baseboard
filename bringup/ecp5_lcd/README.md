@@ -5,7 +5,7 @@
 
 [> Build
 --------
-python3 -m litex_boards.targets.litex_acorn_baseboard --with-lcd --build --load
+python3 -m litex_boards.targets.litex_acorn_baseboard --integrated-main-ram-size=0x2000 --with-lcd --build --load
 
 [> Check
 --------
@@ -22,3 +22,7 @@ litex_term /dev/ttyUSBX
     0x50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     0x60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
     0x70: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+cd firmware && make
+litex_term /dev/ttyUSBX --kernel=firmware.bin
+lcd
