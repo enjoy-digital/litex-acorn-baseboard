@@ -6,7 +6,7 @@
 
 [> Build
 --------
-python3 -m litex_boards.targets.litex_m2_baseboard --with-video-terminal --build --load
+python3 -m litex_boards.targets.litex_acorn_baseboard --with-video-terminal --build --load
 
 [> Check
 --------

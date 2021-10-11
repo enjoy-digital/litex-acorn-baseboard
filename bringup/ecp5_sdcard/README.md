@@ -6,7 +6,7 @@
 
 [> Build
 --------
-python3 -m litex_boards.targets.litex_m2_baseboard --integrated-main-ram-size=0x1000 --with-sdcard --build --load
+python3 -m litex_boards.targets.litex_acorn_baseboard --integrated-main-ram-size=0x1000 --with-sdcard --build --load
 
 [> Check
 --------
