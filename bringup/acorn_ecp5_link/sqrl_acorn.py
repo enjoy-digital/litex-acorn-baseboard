@@ -34,6 +34,16 @@ _transceiver_io = [
         Subsignal("p", Pins("D9")),
         Subsignal("n", Pins("C9"))
     ),
+
+    # PCIe
+    ("pcie_tx", 0,
+        Subsignal("p", Pins("D11")),
+        Subsignal("n", Pins("C11"))
+    ),
+    ("pcie_rx", 0,
+        Subsignal("p", Pins("D5")),
+        Subsignal("n", Pins("C5"))
+    ),
 ]
 
 # CRG ----------------------------------------------------------------------------------------------
@@ -56,7 +66,7 @@ class CRG(Module):
 
 class GTPTestSoC(SoCMini):
     def __init__(self, platform, connector="pcie", linerate=2.5e9):
-        assert connector in ["sfp"]
+        assert connector in ["sfp", "pcie"]
         sys_clk_freq = int(100e6)
 
         # SoCMini ----------------------------------------------------------------------------------
@@ -110,7 +120,8 @@ class GTPTestSoC(SoCMini):
         ]
 
         # RX (slow counter) --> Leds
-        self.comb += platform.request("user_led", 3).eq(serdes0.source.data[0])
+        self.comb += serdes0.source.ready.eq(1)
+        self.comb += platform.request("user_led", 3).eq(serdes0.source.data[8])
 
         # Leds -------------------------------------------------------------------------------------
         sys_counter = Signal(32)
