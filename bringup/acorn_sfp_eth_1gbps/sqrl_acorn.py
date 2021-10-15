@@ -72,7 +72,7 @@ class CRG(Module):
 # BaseSoC -----------------------------------------------------------------------------------------
 
 class BaseSoC(SoCCore):
-    def __init__(self, variant="cle-215+", sys_clk_freq=int(100e6), with_led_chaser=True,
+    def __init__(self, variant="cle-215+", sys_clk_freq=int(125e6), with_led_chaser=True,
                  with_pcie=False, with_sata=False, **kwargs):
         platform = acorn.Platform(variant=variant)
 
@@ -157,6 +157,40 @@ class BaseSoC(SoCCore):
             # Core
             self.add_sata(phy=self.sata_phy, mode="read+write")
 
+        # Etherbone --------------------------------------------------------------------------------
+
+        from litex.build.generic_platform import Subsignal, Pins
+        from liteeth.phy.a7_gtp import QPLLSettings, QPLL
+        from liteeth.phy.a7_1000basex import A7_1000BASEX
+
+        _eth_io = [
+            ("sfp", 0,
+                Subsignal("txp",  Pins("D7")),
+                Subsignal("txn",  Pins("C7")),
+                Subsignal("rxp",  Pins("D9")),
+                Subsignal("rxn",  Pins("C9")),
+            ),
+        ]
+        platform.add_extension(_eth_io)
+
+        # phy
+        qpll_settings = QPLLSettings(
+            refclksel  = 0b001,
+            fbdiv      = 4,
+            fbdiv_45   = 5,
+            refclk_div = 1
+        )
+        qpll = QPLL(ClockSignal("sys"), qpll_settings)
+        self.submodules += qpll
+        self.submodules.ethphy = A7_1000BASEX(
+            qpll_channel = qpll.channels[0],
+            data_pads    = self.platform.request("sfp"),
+            sys_clk_freq = self.clk_freq,
+            tx_polarity  = 1,
+            rx_polarity  = 1)
+        platform.add_platform_command("set_property SEVERITY {{Warning}} [get_drc_checks REQP-49]")
+        self.add_etherbone(phy=self.ethphy)
+
         # Leds -------------------------------------------------------------------------------------
         if with_led_chaser:
             self.submodules.leds = LedChaser(
@@ -171,7 +205,7 @@ def main():
     parser.add_argument("--load",            action="store_true", help="Load bitstream")
     parser.add_argument("--flash",           action="store_true", help="Flash bitstream")
     parser.add_argument("--variant",         default="cle-215+",  help="Board variant: cle-215+ (default), cle-215 or cle-101")
-    parser.add_argument("--sys-clk-freq",    default=100e6,       help="System clock frequency (default: 100MHz)")
+    parser.add_argument("--sys-clk-freq",    default=125e6,       help="System clock frequency (default: 125MHz)")
     pcieopts = parser.add_mutually_exclusive_group()
     pcieopts.add_argument("--with-pcie",     action="store_true", help="Enable PCIe support")
     parser.add_argument("--driver",          action="store_true", help="Generate PCIe driver")
