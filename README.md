@@ -31,10 +31,45 @@ The board is mainly intended to be used as a development board for LiteX: From r
 be a nice and cheap FPGA development board for developers willing to play with PCIe, SFP, SATA, etc... or wanting to create an standalone and
 open source Linux platforms.
 
+The development has been specified and funded by Enjoy-Digital (@enjoy-digital); also doing the HDL/Gateware development.
+The schematic/pcb has been designed by Ilia Sergachev (@sergachev) who also assembled the initial prototypes.
+
+![](hardware/acorn-baseboard-m2-ssd.jpg)
+
+[> Availability/Price
+---------------------
+
+The hardware and HDL is currently in development and the different features are progressively validated. Since the board involved 2 FPGAs some extra-development is also required in LiteX to allow creation of Multi-SoCs designs involving the 2 FPGAs.
+
+Due to **#shipshortage**, some of the components of the current revision of the board will  probably not be available before **February 2022**, so once the current version will be validated, we'll probably investigate options to re-design part of the board to be able to produce it more
+easily/quickly.
+
+The aim of the board is to allow new kinds of designs with LiteX and to also enable users to play more easily with the framework, experiment with it and eventually contribute. So we'd like
+to be able to **offer the board to regular LiteX contributors** or/and to **sell it at a low price** (probably in the **100-200€ range including the Acorn**).
+
+[> Validation Status
+--------------------
+- [ ] PCIe Gen2 X1.
+- [ ] SFP.
+- [X] M2 SATA SSD.
+- [X] ECP5 JTAG/UART.
+- [ ] Acorn JTAG.
+- [ ] Acorn/ECP5 Link.
+- [X] 1Gbps Ethernet.
+- [X] HDMI Out.
+- [X] SDCard.
+- [X] 4X PMODs.
+- [X] 2X Buttons.
+- [X] SSD1306 LCD.
+- [ ] 2X ECP5 SATA.
+
+Some of the bringup tests are shared in Twitter:
+- RISC-V Linux boot from M2 SSD: https://twitter.com/enjoy_digital/status/1450037624446586883
+
 [> Prerequisites
 ----------------
 - Python3, Vivado.
-- Either a Vivado-compatible JTAG cable (native or XVCD), or OpenOCD.
+- JTAG HS2 cable (or OpenOCD compatible cable).
 
 [> Installing LiteX
 -------------------
@@ -45,8 +80,8 @@ $ sudo ./litex_setup.py init install
 ```
 ... or follow the installation instructions if the LiteX Wiki: https://github.com/enjoy-digital/litex/wiki/Installation
 
-[> Designs
-----------
+[> Designs/Apps
+---------------
 
 TODO
 
