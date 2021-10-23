@@ -49,12 +49,14 @@ to be able to **offer the board to regular LiteX contributors** or/and to **sell
 
 [> Validation Status
 --------------------
-- [ ] PCIe Gen2 X1.
+- [X] PCIe Gen2 X1.
 - [ ] SFP.
 - [X] M2 SATA SSD.
 - [X] ECP5 JTAG/UART.
-- [ ] Acorn JTAG.
-- [ ] Acorn/ECP5 Link.
+- [X] Acorn JTAG.
+- [ ] Acorn/ECP5 Fast Link.
+- [X] Acorn/ECP5 Slow Link (2 of 4 lines tested).
+- [X] ECP5 boot control from Acorn via I2C.
 - [X] 1Gbps Ethernet.
 - [X] HDMI Out.
 - [X] SDCard.
