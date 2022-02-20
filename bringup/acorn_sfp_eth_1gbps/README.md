@@ -6,7 +6,7 @@
 
 [> Build
 --------
-./sqrl_acorn.py --cpu-type=None --integrated-main-ram-size=0x100 --build --load
+./sqrl_acorn.py --build --load
 
 [> Check
 --------
