@@ -50,7 +50,7 @@ to be able to **offer the board to regular LiteX contributors** or/and to **sell
 [> Validation Status
 --------------------
 - [X] PCIe Gen2 X1.
-- [ ] SFP.
+- [X] SFP.
 - [X] M2 SATA SSD.
 - [X] ECP5 JTAG/UART.
 - [X] Acorn JTAG.
