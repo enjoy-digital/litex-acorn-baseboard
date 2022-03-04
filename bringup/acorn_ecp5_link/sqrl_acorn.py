@@ -6,6 +6,11 @@
 # Copyright (c) 2017-2020 Florent Kermarrec <florent@enjoy-digital.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
+# Build/Use:
+# ./sqrl_acorn.py --connector=ecp5 --linerate=1.25e9 --build --load
+# litex_server --jtag --jtag-config=openocd_xc7_ft232.cfg
+# ./test_prbs.py --csr-csv=sqrl_acorn.csv
+
 import sys
 import argparse
 
@@ -44,6 +49,16 @@ _transceiver_io = [
         Subsignal("p", Pins("D5")),
         Subsignal("n", Pins("C5"))
     ),
+
+    # ECP5
+    ("ecp5_tx", 0,
+     Subsignal("p", Pins("B4")),
+     Subsignal("n", Pins("A4"))
+     ),
+    ("ecp5_rx", 0,
+     Subsignal("p", Pins("B8")),
+     Subsignal("n", Pins("A8"))
+     ),
 ]
 
 # CRG ----------------------------------------------------------------------------------------------
@@ -60,22 +75,20 @@ class CRG(Module):
         self.submodules.pll = pll = S7PLL()
         self.comb += pll.reset.eq(self.rst)
         pll.register_clkin(clk200, 200e6)
-        pll.create_clkout(self.cd_sys,       sys_clk_freq)
+        pll.create_clkout(self.cd_sys, sys_clk_freq)
 
 # GTPTestSoC ---------------------------------------------------------------------------------------
 
 class GTPTestSoC(SoCMini):
-    def __init__(self, platform, connector="pcie", linerate=2.5e9):
-        assert connector in ["sfp", "pcie"]
+    def __init__(self, platform, connector, linerate):
+        assert connector in ["sfp", "pcie", "ecp5"]
         sys_clk_freq = int(100e6)
 
         # SoCMini ----------------------------------------------------------------------------------
-        SoCMini.__init__(self, platform, sys_clk_freq,
-            ident         = "LiteSATA bench on Acorn CLE 215+",
-            ident_version = True,
-            with_uart     = True,
-            uart_name     = "bridge"
-        )
+        SoCMini.__init__(self, platform, sys_clk_freq, ident="LiteICLink bench on Acorn CLE 215+")
+
+        # JTAGBone----------------------------------------------------------------------------------
+        self.add_jtagbone()
 
         # CRG --------------------------------------------------------------------------------------
         self.submodules.crg = CRG(platform, sys_clk_freq)
@@ -84,7 +97,6 @@ class GTPTestSoC(SoCMini):
         self.clock_domains.cd_refclk = ClockDomain()
         self.crg.pll.create_clkout(self.cd_refclk, 125e6)
         platform.add_platform_command("set_property SEVERITY {{Warning}} [get_drc_checks REQP-49]")
-
 
         # GTP PLL ----------------------------------------------------------------------------------
         pll = GTPQuadPLL(self.cd_refclk.clk, 125e6, linerate)
@@ -97,6 +109,8 @@ class GTPTestSoC(SoCMini):
         self.submodules.serdes0 = serdes0 = GTP(pll, tx_pads, rx_pads, sys_clk_freq,
             tx_buffer_enable = True,
             rx_buffer_enable = True,
+            #tx_polarity      = 1,
+            #rx_polarity      = 1,
             clock_aligner    = False)
         serdes0.add_stream_endpoints()
         serdes0.add_controls()
@@ -142,8 +156,8 @@ def main():
     parser = argparse.ArgumentParser(description="LiteICLink transceiver example on Acorn CLE 215+")
     parser.add_argument("--build",     action="store_true", help="Build bitstream")
     parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM)")
-    parser.add_argument("--connector", default="sfp",       help="Connector: sfp (default)")
-    parser.add_argument("--linerate",  default="2.5e9",     help="Linerate (default: 2.5e9)")
+    parser.add_argument("--connector", default="ecp5",      help="Connector")
+    parser.add_argument("--linerate",  default="1.25e9",    help="Linerate")
     args = parser.parse_args()
 
     platform = sqrl_acorn.Platform()
