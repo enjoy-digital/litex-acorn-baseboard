@@ -8,8 +8,8 @@
 
 # Build/Use:
 # ./sqrl_acorn.py --connector=ecp5 --linerate=1.25e9 --build --load
-# litex_server --jtag --jtag-config=openocd_xc7_ft232.cfg
-# ./test_prbs.py --csr-csv=sqrl_acorn.csv
+# litex_server --jtag --jtag-config=openocd_xc7_ft232.cfg --bind-port=1234
+# ./test_prbs.py --csr-csv=sqrl_acorn.csv --port=1234
 
 import sys
 import argparse
@@ -109,13 +109,12 @@ class GTPTestSoC(SoCMini):
         self.submodules.serdes0 = serdes0 = GTP(pll, tx_pads, rx_pads, sys_clk_freq,
             tx_buffer_enable = True,
             rx_buffer_enable = True,
-            #tx_polarity      = 1,
-            #rx_polarity      = 1,
+            tx_polarity      = 1,
+            rx_polarity      = 1,
             clock_aligner    = False)
         serdes0.add_stream_endpoints()
         serdes0.add_controls()
         serdes0.add_clock_cycles()
-        self.add_csr("serdes0")
 
         platform.add_period_constraint(serdes0.cd_tx.clk, 1e9/serdes0.tx_clk_freq)
         platform.add_period_constraint(serdes0.cd_rx.clk, 1e9/serdes0.rx_clk_freq)
