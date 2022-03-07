@@ -156,7 +156,7 @@ def main():
     parser.add_argument("--build",     action="store_true", help="Build bitstream")
     parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM)")
     parser.add_argument("--connector", default="ecp5",      help="Connector")
-    parser.add_argument("--linerate",  default="1.25e9",    help="Linerate")
+    parser.add_argument("--linerate",  default="2.5e9",    help="Linerate (default: 2.5e9)")
     args = parser.parse_args()
 
     platform = sqrl_acorn.Platform()

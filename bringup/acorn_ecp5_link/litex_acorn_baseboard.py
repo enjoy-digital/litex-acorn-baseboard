@@ -42,6 +42,7 @@ class _CRG(Module):
 
         # Clk / Rst
         clk50 = platform.request("clk50")
+        rst_n = platform.request("user_btn", 0)
 
         # Power on reset
         por_count = Signal(16, reset=2**16-1)
@@ -52,7 +53,7 @@ class _CRG(Module):
 
         # PLL
         self.submodules.pll = pll = ECP5PLL()
-        self.comb += pll.reset.eq(~por_done | self.rst)
+        self.comb += pll.reset.eq(~por_done | ~rst_n | self.rst)
         pll.register_clkin(clk50, 50e6)
         pll.create_clkout(self.cd_sys, sys_clk_freq)
         if refclk_from_pll:
@@ -105,6 +106,7 @@ class BaseSoC(SoCMini):
             rx_polarity = 0,
             tx_polarity = 0,
         )
+        self.comb += serdes0.init.rst.eq(self.crg.pll.reset)
         serdes0.add_stream_endpoints()
         serdes0.add_controls()
         serdes0.add_clock_cycles()
@@ -139,7 +141,7 @@ class BaseSoC(SoCMini):
 
         rx_byte = Signal(8)
         self.sync.rx += [
-            #serdes0.rx_align.eq(1),
+            serdes0.rx_align.eq(1),
             # No word aligner, so look for K28.5 and redirect the other byte to the leds
             If(serdes0.source.data[0:8] == K(28, 5),
                 rx_byte.eq(serdes0.source.data[8:]),
@@ -183,7 +185,7 @@ def main():
     parser.add_argument("--load",         action="store_true", help="Load bitstream.")
     parser.add_argument("--flash",        action="store_true", help="Flash bitstream to SPI Flash.")
     parser.add_argument("--sys-clk-freq", default=50e6,        help="System clock frequency.")
-    parser.add_argument("--linerate",     default="0.8e9",    help="Linerate")
+    parser.add_argument("--linerate",     default="2.5e9",     help="Linerate (default: 2.5e9)")
     args = parser.parse_args()
 
     soc = BaseSoC(
