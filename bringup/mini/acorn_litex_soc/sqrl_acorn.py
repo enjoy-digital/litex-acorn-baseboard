@@ -8,8 +8,8 @@
 
 # Build/Use ----------------------------------------------------------------------------------------
 # Build/Load bitstream:
-# ./sqrl_acorn.py --uart-name=jtag_uart --build --load
-# litex_server --jtag --jtag-config=openocd_xc7_ft232.cfg
+# ./sqrl_acorn.py --build --load
+# litex_term /dev/ttyUSBX (X=1 if only the baseboard connected).
 
 import os
 
