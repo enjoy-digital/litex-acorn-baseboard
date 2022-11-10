@@ -6,14 +6,16 @@
                                  / _ )___ ____ ___ / /  ___  ___ ________/ /
                                 / _  / _ `(_-</ -_) _ \/ _ \/ _ `/ __/ _  /
                                /____/\_,_/___/\__/_.__/\___/\_,_/_/  \_,_/
-                                       Copyright 2021 / Enjoy-Digital
+                                    Copyright 2021-2022 / Enjoy-Digital
 
 [> Intro
 --------
 
 ![](hardware/acorn-baseboard-proto.jpg)
 
-The LiteX-Acorn-Baseboard is a baseboard developed around the SQRL's Acorn board (or Nite/LiteFury) expanding their possibilities with:
+The LiteX-Acorn-Baseboards are baseboards developed around the SQRL's Acorn board (or Nite/LiteFury) expanding their possibilities with:
+
+**Standard variant:**
 - A PCIe X1 connector.
 - A SFP connector.
 - A M2 SATA slot.
@@ -27,7 +29,13 @@ The LiteX-Acorn-Baseboard is a baseboard developed around the SQRL's Acorn board
 - A LCD.
 - 2 SATA connectors (connected to the ECP5's SerDeses).
 
-The board is mainly intended to be used as a development board for LiteX: From regression testing to development of new features; but can also
+**Mini variant:**
+- A PCIe X1 connector.
+- 2 SFP connectors.
+- A SATA connector.
+- A JTAG/UART port.
+
+The boards are mainly intended to be used as a development boards for LiteX: From regression testing to development of new features; but can also
 be a nice and cheap FPGA development board for developers willing to play with PCIe, SFP, SATA, etc... or wanting to create an standalone and
 open source Linux platforms.
 
@@ -39,16 +47,15 @@ The schematic/pcb has been designed by Ilia Sergachev (@sergachev) who also asse
 [> Availability/Price
 ---------------------
 
-The hardware and HDL is currently in development and the different features are progressively validated. Since the board involved 2 FPGAs some extra-development is also required in LiteX to allow creation of Multi-SoCs designs involving the 2 FPGAs.
+The hardware and HDL is currently in development and the different features are  progressively validated. Since the board involved 2 FPGAs some extra-development is also required in LiteX to allow creation of Multi-SoCs designs involving the 2 FPGAs.
 
-Due to **#shipshortage**, some of the components of the current revision of the board will  probably not be available before **February 2022**, so once the current version will be validated, we'll probably investigate options to re-design part of the board to be able to produce it more
-easily/quickly.
+Due to **#shipshortage**, some of the components of the current revision of the board will  probably not be available before **February 2022**, so once the current version will be validated, we'll probably investigate options to re-design part of the board to be able to produce it more easily/quickly.
 
-The aim of the board is to allow new kinds of designs with LiteX and to also enable users to play more easily with the framework, experiment with it and eventually contribute. So we'd like
-to be able to **offer the board to regular LiteX contributors** or/and to **sell it at a low price** (probably in the **100-200€ range including the Acorn**).
+The aim of the boards is to allow new kinds of designs with LiteX and to also enable users to play more easily with the framework, experiment with it and eventually contribute. So we'd like to be able to **offer the board to regular LiteX contributors** or/and to **sell it at a low price** (probably in the **100-200€ range including the Acorn**).
 
 [> Validation Status
 --------------------
+**Standard variant:**
 - [X] PCIe Gen2 X1.
 - [X] SFP.
 - [X] M2 SATA SSD.
@@ -65,8 +72,10 @@ to be able to **offer the board to regular LiteX contributors** or/and to **sell
 - [X] SSD1306 LCD.
 - [ ] 2X ECP5 SATA.
 
-Some of the bringup tests are shared in Twitter:
-- RISC-V Linux boot from M2 SSD: https://twitter.com/enjoy_digital/status/1450037624446586883
+**Mini variant:**
+- [ ] PCIe Gen2 X1.
+- [ ] SFPs.
+- [ ] SATA.
 
 [> Prerequisites
 ----------------
