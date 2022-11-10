@@ -74,7 +74,7 @@ class BaseSoC(SoCMini):
 
         # CRG --------------------------------------------------------------------------------------
         refclk_from_pll = True
-        refclk_freq     = 125e6
+        refclk_freq     = 150e6
         self.submodules.crg = _CRG(platform, sys_clk_freq, refclk_from_pll, refclk_freq)
 
         # SerDes RefClk ----------------------------------------------------------------------------
@@ -102,11 +102,12 @@ class BaseSoC(SoCMini):
         tx_pads = platform.request(connector + "_tx")
         rx_pads = platform.request(connector + "_rx")
         self.submodules.serdes0 = serdes0 = SerDesECP5(serdes_pll, tx_pads, rx_pads,
+            dual        = 0,
             channel     = 0,
             rx_polarity = 0,
             tx_polarity = 0,
         )
-        self.comb += serdes0.init.rst.eq(self.crg.pll.reset)
+        #self.comb += serdes0.init.rst.eq(self.crg.pll.reset)
         serdes0.add_stream_endpoints()
         serdes0.add_controls()
         serdes0.add_clock_cycles()
@@ -157,6 +158,7 @@ class BaseSoC(SoCMini):
             serdes0.init.fsm,
             serdes0.init.tx_lol,
             serdes0.init.rx_lol,
+            serdes0.init.rx_los,
             ], depth=512)
 
         # Leds -------------------------------------------------------------------------------------
@@ -185,7 +187,7 @@ def main():
     parser.add_argument("--load",         action="store_true", help="Load bitstream.")
     parser.add_argument("--flash",        action="store_true", help="Flash bitstream to SPI Flash.")
     parser.add_argument("--sys-clk-freq", default=50e6,        help="System clock frequency.")
-    parser.add_argument("--linerate",     default="2.5e9",     help="Linerate (default: 2.5e9)")
+    parser.add_argument("--linerate",     default="3.0e9",     help="Linerate (default: 3.0e9)")
     args = parser.parse_args()
 
     soc = BaseSoC(

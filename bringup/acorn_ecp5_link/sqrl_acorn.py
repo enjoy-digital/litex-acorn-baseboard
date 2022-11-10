@@ -95,11 +95,11 @@ class GTPTestSoC(SoCMini):
 
         # GTP RefClk -------------------------------------------------------------------------------
         self.clock_domains.cd_refclk = ClockDomain()
-        self.crg.pll.create_clkout(self.cd_refclk, 125e6)
+        self.crg.pll.create_clkout(self.cd_refclk, 150e6)
         platform.add_platform_command("set_property SEVERITY {{Warning}} [get_drc_checks REQP-49]")
 
         # GTP PLL ----------------------------------------------------------------------------------
-        pll = GTPQuadPLL(self.cd_refclk.clk, 125e6, linerate)
+        pll = GTPQuadPLL(self.cd_refclk.clk, 150e6, linerate)
         print(pll)
         self.submodules += pll
 
@@ -156,7 +156,7 @@ def main():
     parser.add_argument("--build",     action="store_true", help="Build bitstream")
     parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM)")
     parser.add_argument("--connector", default="ecp5",      help="Connector")
-    parser.add_argument("--linerate",  default="2.5e9",    help="Linerate (default: 2.5e9)")
+    parser.add_argument("--linerate",  default="3.0e9",     help="Linerate (default: 3.0e9)")
     args = parser.parse_args()
 
     platform = sqrl_acorn.Platform()
