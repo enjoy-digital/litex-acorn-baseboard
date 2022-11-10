@@ -11,7 +11,7 @@ import argparse
 
 from migen import *
 
-from litex_boards.platforms import sqrl_acorn
+import sqrl_acorn_platform as sqrl_acorn
 
 from litex.build.generic_platform import *
 
@@ -25,14 +25,32 @@ from liteiclink.serdes.gtp_7series import GTPQuadPLL, GTP
 # IOs ----------------------------------------------------------------------------------------------
 
 _transceiver_io = [
-    # PCIe
+    # PCIe 0.
     ("pcie_tx", 0,
-        Subsignal("p", Pins("B6")),
-        Subsignal("n", Pins("A6"))
+        Subsignal("p", Pins("D7")),
+        Subsignal("n", Pins("C7"))
     ),
     ("pcie_rx", 0,
-        Subsignal("p", Pins("B10")),
-        Subsignal("n", Pins("A10"))
+        Subsignal("p", Pins("D9")),
+        Subsignal("n", Pins("C9"))
+    ),
+    # SFP 0.
+    ("sfp0_tx", 0, # Inverted on Acorn and on Baseboard.
+        Subsignal("p", Pins("D5")),
+        Subsignal("n", Pins("C5"))
+    ),
+    ("sfp0_rx", 0, # Inverted on Acorn.
+        Subsignal("p", Pins("D11")),
+        Subsignal("n", Pins("C11"))
+    ),
+    # SFP 1.
+    ("sfp1_tx", 0, # Inverted on Acorn and on Baseboard.
+        Subsignal("p", Pins("B4")),
+        Subsignal("n", Pins("A4"))
+    ),
+    ("sfp1_rx", 0, # Inverted on Acorn.
+        Subsignal("p", Pins("B8")),
+        Subsignal("n", Pins("C8"))
     ),
 ]
 
@@ -50,13 +68,13 @@ class CRG(Module):
         self.submodules.pll = pll = S7PLL()
         self.comb += pll.reset.eq(self.rst)
         pll.register_clkin(clk200, 200e6)
-        pll.create_clkout(self.cd_sys,       sys_clk_freq)
+        pll.create_clkout(self.cd_sys, sys_clk_freq)
 
 # GTPTestSoC ---------------------------------------------------------------------------------------
 
 class GTPTestSoC(SoCMini):
     def __init__(self, platform, connector="pcie", linerate=2.5e9):
-        assert connector in ["pcie"]
+        assert connector in ["pcie", "sfp0", "sfp1"]
         sys_clk_freq = int(100e6)
 
         # SoCMini ----------------------------------------------------------------------------------
@@ -73,7 +91,6 @@ class GTPTestSoC(SoCMini):
         self.crg.pll.create_clkout(self.cd_refclk, 125e6)
         platform.add_platform_command("set_property SEVERITY {{Warning}} [get_drc_checks REQP-49]")
 
-
         # GTP PLL ----------------------------------------------------------------------------------
         pll = GTPQuadPLL(self.cd_refclk.clk, 125e6, linerate)
         print(pll)
@@ -85,7 +102,9 @@ class GTPTestSoC(SoCMini):
         self.submodules.serdes0 = serdes0 = GTP(pll, tx_pads, rx_pads, sys_clk_freq,
             tx_buffer_enable = True,
             rx_buffer_enable = True,
-            clock_aligner    = False)
+            clock_aligner    = False,
+            rx_polarity      = 0, # FIXME for SFPs.
+            tx_polarity      = 0)
         serdes0.add_stream_endpoints()
         serdes0.add_controls()
         serdes0.add_clock_cycles()
@@ -125,11 +144,11 @@ class GTPTestSoC(SoCMini):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteICLink transceiver example on Acorn CLE 215+")
-    parser.add_argument("--build",     action="store_true", help="Build bitstream")
-    parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM)")
-    parser.add_argument("--connector", default="pcie",      help="Connector: pcie (default)")
-    parser.add_argument("--linerate",  default="2.5e9",     help="Linerate (default: 2.5e9)")
+    parser = argparse.ArgumentParser(description="LiteICLink transceiver example on Acorn CLE 215+.")
+    parser.add_argument("--build",     action="store_true", help="Build bitstream.")
+    parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM).")
+    parser.add_argument("--connector", default="sfp0",      help="Connector: pcie, sfp0 or sfp1.")
+    parser.add_argument("--linerate",  default="2.5e9",     help="Linerate (default: 2.5e9).")
     args = parser.parse_args()
 
     platform = sqrl_acorn.Platform()
@@ -138,7 +157,7 @@ def main():
         connector = args.connector,
         linerate  = float(args.linerate),
     )
-    builder = Builder(soc, csr_csv="sqrl_acorn.csv")
+    builder = Builder(soc, csr_csv="csr.csv")
     builder.build(run=args.build)
 
     if args.load:
