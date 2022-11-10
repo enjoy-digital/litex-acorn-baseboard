@@ -11,11 +11,12 @@
 [> Intro
 --------
 
-![](hardware/acorn-baseboard-proto.jpg)
-
 The LiteX-Acorn-Baseboards are baseboards developed around the SQRL's Acorn board (or Nite/LiteFury) expanding their possibilities with:
 
 **Standard variant:**
+
+![](hardware/acorn-baseboard-proto.jpg)
+
 - A PCIe X1 connector.
 - A SFP connector.
 - A M2 SATA slot.
@@ -30,6 +31,9 @@ The LiteX-Acorn-Baseboards are baseboards developed around the SQRL's Acorn boar
 - 2 SATA connectors (connected to the ECP5's SerDeses).
 
 **Mini variant:**
+
+![](hardware/acorn-baseboard-mini-proto.jpg)
+
 - A PCIe X1 connector.
 - 2 SFP connectors.
 - A SATA connector.
