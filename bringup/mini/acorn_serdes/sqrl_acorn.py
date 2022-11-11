@@ -52,6 +52,15 @@ _transceiver_io = [
         Subsignal("p", Pins("B8")),
         Subsignal("n", Pins("C8"))
     ),
+    # SATA.
+    ("sata_tx", 0, # Inverted on Acorn.
+        Subsignal("p", Pins("B6")),
+        Subsignal("n", Pins("A5"))
+    ),
+    ("sata_rx", 0, # Inverted on Acorn.
+        Subsignal("p", Pins("B10")),
+        Subsignal("n", Pins("A10"))
+    ),
 ]
 
 # CRG ----------------------------------------------------------------------------------------------
@@ -74,7 +83,7 @@ class CRG(Module):
 
 class GTPTestSoC(SoCMini):
     def __init__(self, platform, connector="pcie", linerate=2.5e9):
-        assert connector in ["pcie", "sfp0", "sfp1"]
+        assert connector in ["pcie", "sfp0", "sfp1", "sata"]
         sys_clk_freq = int(100e6)
 
         # SoCMini ----------------------------------------------------------------------------------
@@ -103,8 +112,9 @@ class GTPTestSoC(SoCMini):
             tx_buffer_enable = True,
             rx_buffer_enable = True,
             clock_aligner    = False,
-            rx_polarity      = 0, # FIXME for SFPs.
-            tx_polarity      = 0)
+            rx_polarity      = 0, # FIXME for SFPs / SATA.
+            tx_polarity      = 0, # FIXME foe SFPs / SATA.
+        )
         serdes0.add_stream_endpoints()
         serdes0.add_controls()
         serdes0.add_clock_cycles()
@@ -147,7 +157,7 @@ def main():
     parser = argparse.ArgumentParser(description="LiteICLink transceiver example on Acorn CLE 215+.")
     parser.add_argument("--build",     action="store_true", help="Build bitstream.")
     parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM).")
-    parser.add_argument("--connector", default="sfp0",      help="Connector: pcie, sfp0 or sfp1.")
+    parser.add_argument("--connector", default="sfp0",      help="Connector: pcie, sfp0, sfp1 or sata")
     parser.add_argument("--linerate",  default="2.5e9",     help="Linerate (default: 2.5e9).")
     args = parser.parse_args()
 
