@@ -154,14 +154,23 @@ class GTPTestSoC(SoCMini):
         self.sync.rx += rx_counter.eq(rx_counter + 1)
         self.comb += platform.request("user_led", 2).eq(rx_counter[26])
 
+        # RX Analyzer ------------------------------------------------------------------------------
+        from litescope import LiteScopeAnalyzer
+        self.submodules.analyzer = LiteScopeAnalyzer([serdes0.source],
+            depth        = 2048,
+            clock_domain = "rx",
+            samplerate   = sys_clk_freq,
+            csr_csv      = "analyzer.csv"
+        )
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="LiteICLink transceiver example on Acorn CLE 215+.")
     parser.add_argument("--build",     action="store_true", help="Build bitstream.")
     parser.add_argument("--load",      action="store_true", help="Load bitstream (to SRAM).")
-    parser.add_argument("--connector", default="sfp0",      help="Connector: pcie, sfp0, sfp1 or sata")
-    parser.add_argument("--linerate",  default="2.5e9",     help="Linerate (default: 2.5e9).")
+    parser.add_argument("--connector", default="sata",      help="Connector: pcie, sfp0, sfp1 or sata")
+    parser.add_argument("--linerate",  default="1.2e9",     help="Linerate (default: 1.2e9).")
     args = parser.parse_args()
 
     platform = sqrl_acorn.Platform()
