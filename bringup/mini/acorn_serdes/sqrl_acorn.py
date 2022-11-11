@@ -96,12 +96,15 @@ class GTPTestSoC(SoCMini):
         self.submodules.crg = CRG(platform, sys_clk_freq)
 
         # GTP RefClk -------------------------------------------------------------------------------
+        refclk_freq = 125e6
+        if linerate == 1.2e9:
+            refclk_freq = 120e6
         self.clock_domains.cd_refclk = ClockDomain()
-        self.crg.pll.create_clkout(self.cd_refclk, 125e6)
+        self.crg.pll.create_clkout(self.cd_refclk, refclk_freq, margin=0)
         platform.add_platform_command("set_property SEVERITY {{Warning}} [get_drc_checks REQP-49]")
 
         # GTP PLL ----------------------------------------------------------------------------------
-        pll = GTPQuadPLL(self.cd_refclk.clk, 125e6, linerate)
+        pll = GTPQuadPLL(self.cd_refclk.clk, refclk_freq, linerate)
         print(pll)
         self.submodules += pll
 
