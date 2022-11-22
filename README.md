@@ -77,7 +77,7 @@ The aim of the boards is to allow new kinds of designs with LiteX and to also en
 - [ ] 2X ECP5 SATA.
 
 **Mini variant:**
-- [ ] PCIe Gen2 X1.
+- [X] PCIe Gen2 X1.
 - [X] JTAG.
 - [X] UART.
 - [X] SFPs.
