@@ -48,19 +48,16 @@ class CRG(Module):
         self.submodules.pll = pll = S7PLL()
         self.comb += pll.reset.eq(self.rst)
         pll.register_clkin(clk200, 200e6)
-        pll.create_clkout(self.cd_sys, sys_clk_freq)
-        pll.create_clkout(self.cd_idelay, 200e6)
+        pll.create_clkout(self.cd_sys, sys_clk_freq, margin=0)
         # Ignore sys_clk to pll.clkin path created by SoC's rst.
         platform.add_false_path_constraints(self.cd_sys.clk, pll.clkin)
-
-        self.submodules.idelayctrl = S7IDELAYCTRL(self.cd_idelay)
 
 # BaseSoC -----------------------------------------------------------------------------------------
 
 class BaseSoC(SoCMini):
-    def __init__(self, variant="cle-215+", sys_clk_freq=125e6, with_led_chaser=True, **kwargs):
+    def __init__(self, variant="cle-215+", sys_clk_freq=156.25e6, with_led_chaser=True, **kwargs):
         platform = sqrl_acorn.Platform(variant=variant)
-        assert sys_clk_freq == 125e6
+        assert sys_clk_freq == 156.25e6
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCMini.__init__(self, platform, sys_clk_freq, ident="LiteX SoC on Acorn CLE-101/215(+)")
@@ -90,7 +87,7 @@ class BaseSoC(SoCMini):
         qpll_settings = QPLLSettings(
             refclksel  = 0b001,
             fbdiv      = 4,
-            fbdiv_45   = 5,
+            fbdiv_45   = 4,
             refclk_div = 1
         )
         qpll = QPLL(ClockSignal("sys"), qpll_settings)
