@@ -8,6 +8,8 @@
                                /____/\_,_/___/\__/_.__/\___/\_,_/_/  \_,_/
                                     Copyright 2021-2024 / Enjoy-Digital
 
+![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)
+
 [> Intro
 --------
 
