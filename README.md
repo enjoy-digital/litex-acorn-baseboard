@@ -66,6 +66,32 @@ LiteX/SerDes based cores than to make a living**, so batches are of limited size
 be assembled partially manually, so even if we are trying ot be reactive on this, **there could be a
 bit of delay between batches (1 month) and a few days between order and expedition**.
 
+[> Prerequisites
+----------------
+- Python3, Vivado.
+- JTAG HS2 cable (or OpenOCD compatible cable).
+
+[> Installing LiteX
+-------------------
+```sh
+$ wget https://raw.githubusercontent.com/enjoy-digital/litex/master/litex_setup.py
+$ chmod +x litex_setup.py
+$ sudo ./litex_setup.py init install
+```
+... or follow the installation instructions if the LiteX Wiki: https://github.com/enjoy-digital/litex/wiki/Installation
+
+[> Designs/Apps
+---------------
+
+**Mini variant:**
+- LiteX-Boards support with SoC/DRAM/PCIe/Ethernet/SATA support:
+https://github.com/litex-hub/litex-boards/blob/master/litex_boards/targets/litex_acorn_baseboard_mini.py
+- LiteX-HW-CI tests running Linux on it with VexRiscv, NaxRiscv (32 or 64-bit) or Rocket CPUs:
+https://github.com/enjoy-digital/litex_hw_ci/blob/main/configs/test_linux_acorn.py
+- Bringup tests: https://github.com/enjoy-digital/litex-acorn-baseboard/tree/master/bringup/mini
+- + More to come! :)
+
+
 [> Validation Status
 --------------------
 
@@ -92,31 +118,6 @@ bit of delay between batches (1 month) and a few days between order and expediti
 - [X] 2X Buttons.
 - [X] SSD1306 LCD.
 - [ ] 2X ECP5 SATA.
-
-[> Prerequisites
-----------------
-- Python3, Vivado.
-- JTAG HS2 cable (or OpenOCD compatible cable).
-
-[> Installing LiteX
--------------------
-```sh
-$ wget https://raw.githubusercontent.com/enjoy-digital/litex/master/litex_setup.py
-$ chmod +x litex_setup.py
-$ sudo ./litex_setup.py init install
-```
-... or follow the installation instructions if the LiteX Wiki: https://github.com/enjoy-digital/litex/wiki/Installation
-
-[> Designs/Apps
----------------
-
-**Mini variant:**
-- LiteX-Boards support with SoC/DRAM/PCIe/Ethernet/SATA support:
-https://github.com/litex-hub/litex-boards/blob/master/litex_boards/targets/litex_acorn_baseboard_mini.py
-- LiteX-HW-CI tests running Linux on it with VexRiscv, NaxRiscv (32 or 64-bit) or Rocket CPUs:
-https://github.com/enjoy-digital/litex_hw_ci/blob/main/configs/test_linux_acorn.py
-- Bringup tests: https://github.com/enjoy-digital/litex-acorn-baseboard/tree/master/bringup/mini
-- + More to come! :)
 
 [> Contact
 -------------
