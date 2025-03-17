@@ -147,7 +147,7 @@ class Platform(Xilinx7SeriesPlatform):
 
     def create_programmer(self, name='openocd'):
         if name == 'openocd':
-            return OpenOCD("openocd_xc7_ft2232.cfg", "bscan_spi_xc7a200t.bit")
+            return OpenOCD("openocd_xc7_ft4232.cfg", "bscan_spi_xc7a200t.bit")
         elif name == 'vivado':
             # TODO: some board versions may have s25fl128s
             return VivadoProgrammer(flash_part='s25fl256sxxxxxx0-spi-x1_x2_x4')

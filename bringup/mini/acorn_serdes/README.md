@@ -12,7 +12,7 @@
 
 [> Check
 --------
-litex_server --uart --uart-port=/dev/ttyUSBX (X=1 if only the baseboard connected).
+litex_server --uart --uart-port=/dev/ttyUSBX (X=2 if only the baseboard connected).
 ./test_prbs.py:
 Creating Serdes0
 Measuring Serdes0 frequencies...

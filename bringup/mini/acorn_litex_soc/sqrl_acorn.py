@@ -9,7 +9,7 @@
 # Build/Use ----------------------------------------------------------------------------------------
 # Build/Load bitstream:
 # ./sqrl_acorn.py --build --load
-# litex_term /dev/ttyUSBX (X=1 if only the baseboard connected).
+# litex_term /dev/ttyUSBX (X=2 if only the baseboard connected).
 
 import os
 
