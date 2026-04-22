@@ -81,6 +81,7 @@ delay between batches (~1 month) and a few days between order and shipment**.
 ### Prerequisites
 - Python 3.
 - Xilinx Vivado (for the Acorn's Artix-7 FPGA).
+- [openFPGALoader](https://github.com/trabucayre/openFPGALoader) (for flashing; also used by [`flash.py`](flash.py)).
 - JTAG HS2 cable, or any OpenOCD-compatible cable (not needed for SPI-flash loading over PCIe).
 
 ### Installing LiteX
@@ -91,6 +92,16 @@ $ sudo ./litex_setup.py init install
 ```
 ... or follow the installation instructions from the LiteX Wiki:
 https://github.com/enjoy-digital/litex/wiki/Installation
+
+### First-time flashing (fresh Acorn card)
+SQRL Acorn cards ship with their SPI flash write-protected. [`flash.py`](flash.py) automates the
+unlock + flash procedure using `openFPGALoader` only:
+```sh
+$ ./flash.py --unprotect            # one-time: lift the flash write protection
+$ ./flash.py --flash                # flash the reference LiteX bitstream
+$ ./flash.py --unprotect --flash    # or do both in one go
+$ ./flash.py --flash --bitstream my_design.bin   # flash your own bitstream
+```
 
 ### First build (Mini variant)
 A good starting point is the LiteX-Boards target, which covers SoC / DRAM / PCIe / Ethernet / SATA:
