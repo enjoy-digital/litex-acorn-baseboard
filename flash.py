@@ -75,45 +75,48 @@ def unprotect_via_openocd():
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
     # USER1 on Xilinx 7-series = IR 0x02 — selects the BSCAN-SPI proxy's SPI DR.
-    # Each drscan is one SPI transaction (CS asserts on SHIFT-DR, deasserts on UPDATE-DR).
-    # Bytes on the wire are MSB-first; openocd drscan shifts LSB-first, so each byte
-    # is pre bit-reversed. openocd prints TDO capture as hex; for an RDSR drscan 16
-    # bits with value 0xa0 the response SR comes back bit-reversed in the upper byte
-    # of the printed value (the lower byte covers cmd-send, flash not driving MISO).
-    resen      = _rev8(0x66)                                                              # Software Reset Enable
-    reset      = _rev8(0x99)                                                              # Software Reset
-    wren       = _rev8(0x06)                                                              # Write Enable
-    wrsr_all   = _rev8(0x01) | (_rev8(0x00) << 8) | (_rev8(0x00) << 16)                   # 24-bit: WRSR cmd + SR=0x00 + CR=0x00
-    ppb_erase  = _rev8(0xE4)                                                              # Erase all non-volatile per-sector PPB lock bits
-    rdsr       = _rev8(0x05)                                                              # Read Status Register
-    rdcr       = _rev8(0x35)                                                              # Read Configuration Register
+    # openocd drscan shifts LSB-first, SPI is MSB-first → each byte in the drscan
+    # value is pre bit-reversed; reads come back the same way (upper byte of the
+    # captured hex holds the register value, bit-reversed). A tiny Tcl helper
+    # (reveal_reg) unpacks it back to a human-readable value.
+    resen      = _rev8(0x66)
+    reset_cmd  = _rev8(0x99)
+    wren       = _rev8(0x06)
+    wrsr_all   = _rev8(0x01) | (_rev8(0x00) << 8) | (_rev8(0x00) << 16)
+    ppb_erase  = _rev8(0xE4)
+    rdsr       = _rev8(0x05)
+    rdcr       = _rev8(0x35)
+    helper = (
+        'proc _rev8 {b} { set r 0; for {set i 0} {$i < 8} {incr i} '
+            '{ set r [expr {($r << 1) | (($b >> $i) & 1)}] }; return $r }'
+        ' ; '
+        'proc reveal_reg {label cap_hex} {'
+            ' set cap [expr "0x$cap_hex"];'
+            ' set upper [expr {($cap >> 8) & 0xff}];'
+            ' puts [format "  %s = 0x%02x  (raw drscan = 0x%04x)" $label [_rev8 $upper] $cap] }'
+    )
     script = "; ".join([
+        helper,
         "init",
         f"jtagspi_init 0 {{{proxy}}}",
-        # Diagnostic: read SR/CR before we touch anything.
-        'echo "--- pre-unprotect: RDSR, RDCR (response in upper byte of drscan hex, bit-reversed) ---"',
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdsr:02x}",
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdcr:02x}",
-        # Software reset — back to power-on defaults (clears QPI/4-byte/pending ops).
+        'echo "--- pre-unprotect ---"',
+        f'irscan xc7.tap 0x02 ; reveal_reg "RDSR pre " [drscan xc7.tap 16 0x{rdsr:02x}]',
+        f'irscan xc7.tap 0x02 ; reveal_reg "RDCR pre " [drscan xc7.tap 16 0x{rdcr:02x}]',
         'echo "--- software reset (RESEN 0x66, RESET 0x99) ---"',
         "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{resen:02x}",
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{reset:02x}",
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{reset_cmd:02x}",
         "sleep 50",
-        # WREN + WRSR SR=0, CR=0 — clears SRWD + BP[2:0] + QUAD + LC.
         'echo "--- WREN + WRSR SR=0 CR=0 ---"',
         "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{wren:02x}",
         "irscan xc7.tap 0x02", f"drscan xc7.tap 24 0x{wrsr_all:06x}",
         "sleep 200",
-        # WREN + PPB_ERASE — clears per-sector persistent protection bits set by
-        # factory firmware (PPB_LOCK defaults to 1 after power-up so this is legal).
         'echo "--- WREN + PPB_ERASE (0xE4) ---"',
         "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{wren:02x}",
         "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{ppb_erase:02x}",
         "sleep 300",
-        # Diagnostic: read SR/CR after. If protection cleared, both should be 0x00.
-        'echo "--- post-unprotect: RDSR, RDCR ---"',
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdsr:02x}",
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdcr:02x}",
+        'echo "--- post-unprotect ---"',
+        f'irscan xc7.tap 0x02 ; reveal_reg "RDSR post" [drscan xc7.tap 16 0x{rdsr:02x}]',
+        f'irscan xc7.tap 0x02 ; reveal_reg "RDCR post" [drscan xc7.tap 16 0x{rdcr:02x}]',
         "exit",
     ])
     prog.call([get_openocd_cmd(), "-f", config, "-c", script])
