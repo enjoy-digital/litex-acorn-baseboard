@@ -70,36 +70,50 @@ def unprotect_via_openocd():
     except ImportError:
         sys.exit("error: --unprotect needs the 'litex' Python package (for the OpenOCD helper).\n"
                  "       install it per https://github.com/enjoy-digital/litex/wiki/Installation")
-    print("==> Resetting SPI flash + clearing SR/CR via OpenOCD (BSCAN-SPI proxy)")
+    print("==> Resetting SPI flash + clearing SR/CR/PPB via OpenOCD (BSCAN-SPI proxy)")
     prog   = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
     # USER1 on Xilinx 7-series = IR 0x02 — selects the BSCAN-SPI proxy's SPI DR.
     # Each drscan is one SPI transaction (CS asserts on SHIFT-DR, deasserts on UPDATE-DR).
     # Bytes on the wire are MSB-first; openocd drscan shifts LSB-first, so each byte
-    # is pre bit-reversed. Multi-byte transactions pack byte 0 in bits 0..7, byte 1
-    # in bits 8..15, etc.
-    resen    = _rev8(0x66)                                                             # Software Reset Enable
-    reset    = _rev8(0x99)                                                             # Software Reset
-    wren     = _rev8(0x06)                                                             # Write Enable
-    wrsr_all = _rev8(0x01) | (_rev8(0x00) << 8) | (_rev8(0x00) << 16)                  # 24-bit: WRSR cmd + SR=0x00 + CR=0x00
+    # is pre bit-reversed. openocd prints TDO capture as hex; for an RDSR drscan 16
+    # bits with value 0xa0 the response SR comes back bit-reversed in the upper byte
+    # of the printed value (the lower byte covers cmd-send, flash not driving MISO).
+    resen      = _rev8(0x66)                                                              # Software Reset Enable
+    reset      = _rev8(0x99)                                                              # Software Reset
+    wren       = _rev8(0x06)                                                              # Write Enable
+    wrsr_all   = _rev8(0x01) | (_rev8(0x00) << 8) | (_rev8(0x00) << 16)                   # 24-bit: WRSR cmd + SR=0x00 + CR=0x00
+    ppb_erase  = _rev8(0xE4)                                                              # Erase all non-volatile per-sector PPB lock bits
+    rdsr       = _rev8(0x05)                                                              # Read Status Register
+    rdcr       = _rev8(0x35)                                                              # Read Configuration Register
     script = "; ".join([
         "init",
         f"jtagspi_init 0 {{{proxy}}}",
-        # Software reset — brings the flash back to power-on defaults (clears QPI
-        # mode, 4-byte address mode, pending ops) on factory-configured Acorn chips.
-        "irscan xc7.tap 0x02",
-        f"drscan xc7.tap 8 0x{resen:02x}",
-        "irscan xc7.tap 0x02",
-        f"drscan xc7.tap 8 0x{reset:02x}",
+        # Diagnostic: read SR/CR before we touch anything.
+        'echo "--- pre-unprotect: RDSR, RDCR (response in upper byte of drscan hex, bit-reversed) ---"',
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdsr:02x}",
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdcr:02x}",
+        # Software reset — back to power-on defaults (clears QPI/4-byte/pending ops).
+        'echo "--- software reset (RESEN 0x66, RESET 0x99) ---"',
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{resen:02x}",
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{reset:02x}",
         "sleep 50",
-        # Write Enable
-        "irscan xc7.tap 0x02",
-        f"drscan xc7.tap 8 0x{wren:02x}",
-        # WRSR with SR=0x00 (clears SRWD + BP[2:0]) AND CR=0x00 (clears QUAD + LC bits).
-        "irscan xc7.tap 0x02",
-        f"drscan xc7.tap 24 0x{wrsr_all:06x}",
+        # WREN + WRSR SR=0, CR=0 — clears SRWD + BP[2:0] + QUAD + LC.
+        'echo "--- WREN + WRSR SR=0 CR=0 ---"',
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{wren:02x}",
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 24 0x{wrsr_all:06x}",
         "sleep 200",
+        # WREN + PPB_ERASE — clears per-sector persistent protection bits set by
+        # factory firmware (PPB_LOCK defaults to 1 after power-up so this is legal).
+        'echo "--- WREN + PPB_ERASE (0xE4) ---"',
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{wren:02x}",
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{ppb_erase:02x}",
+        "sleep 300",
+        # Diagnostic: read SR/CR after. If protection cleared, both should be 0x00.
+        'echo "--- post-unprotect: RDSR, RDCR ---"',
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdsr:02x}",
+        "irscan xc7.tap 0x02", f"drscan xc7.tap 16 0x{rdcr:02x}",
         "exit",
     ])
     prog.call([get_openocd_cmd(), "-f", config, "-c", script])
