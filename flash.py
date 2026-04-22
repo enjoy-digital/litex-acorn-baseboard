@@ -150,10 +150,22 @@ def unprotect_via_openocd():
 
 def flash_via_openfpgaloader(bitstream):
     """Program *bitstream* to SPI flash via openFPGALoader (fast path; requires
-    the flash to be unprotected first — run --unprotect if the card is fresh)."""
+    the flash to be unprotected first — run --unprotect if the card is fresh).
+
+    --enable-quad re-arms the flash CR.QUAD bit after the write. The Acorn
+    boots in Master SPIx4 mode, which needs QE=1 to fetch its bitstream from
+    flash. --unprotect intentionally clears QE so openFPGALoader's 1-wire SOJ
+    stub can read the chip; we set it back here so the next power cycle boots
+    cleanly from flash."""
     require("openFPGALoader", "See https://github.com/trabucayre/openFPGALoader")
-    print(f"==> Flash {bitstream} via openFPGALoader")
-    run(["openFPGALoader", "-c", "ft4232", "--fpga-part=xc7a200tfbg484", "-f", str(bitstream)])
+    print(f"==> Flash {bitstream} via openFPGALoader (+ re-enable QUAD for SPIx4 boot)")
+    run([
+        "openFPGALoader",
+        "-c", "ft4232",
+        "--fpga-part=xc7a200tfbg484",
+        "-f", str(bitstream),
+        "--enable-quad",
+    ])
 
 
 def main():

@@ -105,7 +105,11 @@ job to work around both:
   software reset (0x66 → 0x99), then `WRSR SR=0x00 CR=0x00` to clear protection + QPI mode, then
   `PPB_ERASE` for any non-volatile per-sector locks. SR/CR are read back before and after so
   you can see the state change.
-- `--flash` uses **openFPGALoader** to erase + program (now that the flash is talkable).
+- `--flash` uses **openFPGALoader** to erase + program the flash, then `--enable-quad` to set
+  the flash's QE bit back to 1 — the Acorn boots in Master SPIx4 mode and needs QE=1 to fetch
+  its bitstream on power-up (which is why a naked `--unprotect` + `--flash` without the QE
+  restore leaves the card looking bricked after power-cycle, even though the flash contents
+  are correct).
 
 ```sh
 $ ./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
