@@ -11,8 +11,8 @@ import argparse
 
 from migen import *
 
-from litex_boards.platforms import acorn
-from litex_boards.targets.acorn import CRG as _CRG
+from litex_boards.platforms import sqrl_acorn as acorn
+from litex_boards.targets.sqrl_acorn import CRG as _CRG
 
 from litex.build.generic_platform import *
 

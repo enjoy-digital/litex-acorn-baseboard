@@ -164,7 +164,8 @@ class BaseSoC(SoCCore):
             self.submodules.leds = LedChaser(
                 pads         = platform.request("user_led", 0),
                 sys_clk_freq = sys_clk_freq)
-        self.comb += platform.request("user_led", 1).eq(~self.pcie_phy._link_status.fields.status)
+        if with_pcie:
+            self.comb += platform.request("user_led", 1).eq(~self.pcie_phy._link_status.fields.status)
 
 # Build --------------------------------------------------------------------------------------------
 

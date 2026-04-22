@@ -31,7 +31,7 @@ from litex.soc.cores.dna  import DNA
 
 from litex.build.generic_platform import Subsignal, Pins
 from liteeth.phy.a7_gtp import QPLLSettings, QPLL
-from liteeth.phy.a7_2500basex import A7_2500BASEX
+from liteeth.phy.a7_1000basex import A7_2500BASEX
 
 # CRG ----------------------------------------------------------------------------------------------
 
