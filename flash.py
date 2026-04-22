@@ -25,6 +25,7 @@
 #   ./flash.py --flash --bitstream my.bin
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -49,18 +50,39 @@ def require(tool, hint=""):
         sys.exit(f"error: {tool} not found in PATH." + (f" {hint}" if hint else ""))
 
 
-def _check_openocd_version():
-    """--unprotect uses openocd's `jtagspi cmd` subcommand, which arrived in 0.12."""
-    try:
-        out = subprocess.run(["openocd", "--version"], capture_output=True, text=True).stderr
-        m = re.search(r"Open On-Chip Debugger\s+(\d+)\.(\d+)", out)
-        if m:
-            major, minor = int(m.group(1)), int(m.group(2))
-            if (major, minor) < (0, 12):
-                print(f"WARNING: openocd {major}.{minor} detected; --unprotect needs 0.12+ for 'jtagspi cmd'.")
-                print( "         Override with OPENOCD=/path/to/newer/openocd, or upgrade.")
-    except Exception:
-        pass
+def _find_openocd():
+    """Locate an openocd binary that supports `jtagspi cmd` (added in 0.12).
+
+    Stock Ubuntu 22.04 ships 0.11 which lacks the command; this function
+    probes a few common alternative install locations. Returns (binary,
+    scripts_dir) where scripts_dir may be None to fall back to defaults.
+    """
+    # Highest priority: user-provided OPENOCD env var — assume they know.
+    env = os.environ.get("OPENOCD")
+    if env:
+        return env, None
+
+    home = str(Path.home())
+    candidates = [
+        # System openocd (sufficient on Ubuntu 24.04+).
+        ("openocd",                                                  None),
+        # LiteX-built openocd (from contrib build scripts).
+        (f"{home}/dev/litex/tmp/openocd/src/openocd",                f"{home}/dev/litex/tmp/openocd/tcl"),
+        # oss-cad-suite bundled openocd.
+        ("/opt/oss-cad-suite/bin/openocd",                           "/opt/oss-cad-suite/share/openocd/scripts"),
+    ]
+    for binary, scripts in candidates:
+        path = shutil.which(binary) if not binary.startswith("/") else (binary if Path(binary).is_file() else None)
+        if not path:
+            continue
+        try:
+            out = subprocess.run([path, "--version"], capture_output=True, text=True).stderr
+            m = re.search(r"Open On-Chip Debugger\s+(\d+)\.(\d+)", out)
+            if m and (int(m.group(1)), int(m.group(2))) >= (0, 12):
+                return path, scripts
+        except Exception:
+            continue
+    return None, None
 
 
 def unprotect_via_openocd():
@@ -73,12 +95,20 @@ def unprotect_via_openocd():
     """
     require("openocd")
     try:
-        from litex.build.openocd import OpenOCD, get_openocd_cmd
+        from litex.build.openocd import OpenOCD
     except ImportError:
         sys.exit("error: --unprotect needs the 'litex' Python package (for the OpenOCD helper).\n"
                  "       install it per https://github.com/enjoy-digital/litex/wiki/Installation")
-    _check_openocd_version()
-    print("==> Resetting SPI flash + clearing SR/CR/PPB via OpenOCD (BSCAN-SPI proxy)")
+    binary, scripts = _find_openocd()
+    if binary is None:
+        sys.exit(
+            "error: --unprotect needs openocd 0.12+ (for the 'jtagspi cmd' subcommand).\n"
+            "       Ubuntu 22.04 ships 0.11, which does not have it. Options:\n"
+            "         - upgrade to openocd 0.12+\n"
+            "         - install oss-cad-suite (https://github.com/YosysHQ/oss-cad-suite-build)\n"
+            "         - build openocd from source and point OPENOCD=/path/to/openocd at it\n"
+        )
+    print(f"==> Resetting SPI flash + clearing SR/CR/PPB via OpenOCD (BSCAN-SPI proxy) [{binary}]")
     prog   = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
@@ -111,7 +141,11 @@ def unprotect_via_openocd():
         'echo "  RDCR post: [jtagspi cmd 0 1 0x35]"',
         "exit",
     ])
-    prog.call([get_openocd_cmd(), "-f", config, "-c", script])
+    cmd = [binary]
+    if scripts:
+        cmd += ["-s", scripts]
+    cmd += ["-f", config, "-c", script]
+    prog.call(cmd)
 
 
 def flash_via_openfpgaloader(bitstream):
