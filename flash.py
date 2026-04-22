@@ -25,6 +25,7 @@
 #   ./flash.py --flash --bitstream my.bin
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -48,12 +49,18 @@ def require(tool, hint=""):
         sys.exit(f"error: {tool} not found in PATH." + (f" {hint}" if hint else ""))
 
 
-def _rev8(b):
-    """Bit-reverse an 8-bit value (openocd's drscan shifts LSB-first, SPI is MSB-first)."""
-    b = ((b & 0xF0) >> 4) | ((b & 0x0F) << 4)
-    b = ((b & 0xCC) >> 2) | ((b & 0x33) << 2)
-    b = ((b & 0xAA) >> 1) | ((b & 0x55) << 1)
-    return b
+def _check_openocd_version():
+    """--unprotect uses openocd's `jtagspi cmd` subcommand, which arrived in 0.12."""
+    try:
+        out = subprocess.run(["openocd", "--version"], capture_output=True, text=True).stderr
+        m = re.search(r"Open On-Chip Debugger\s+(\d+)\.(\d+)", out)
+        if m:
+            major, minor = int(m.group(1)), int(m.group(2))
+            if (major, minor) < (0, 12):
+                print(f"WARNING: openocd {major}.{minor} detected; --unprotect needs 0.12+ for 'jtagspi cmd'.")
+                print( "         Override with OPENOCD=/path/to/newer/openocd, or upgrade.")
+    except Exception:
+        pass
 
 
 def unprotect_via_openocd():
@@ -70,69 +77,49 @@ def unprotect_via_openocd():
     except ImportError:
         sys.exit("error: --unprotect needs the 'litex' Python package (for the OpenOCD helper).\n"
                  "       install it per https://github.com/enjoy-digital/litex/wiki/Installation")
+    _check_openocd_version()
     print("==> Resetting SPI flash + clearing SR/CR/PPB via OpenOCD (BSCAN-SPI proxy)")
     prog   = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
-    # USER1 on Xilinx 7-series = IR 0x02 — selects the BSCAN-SPI proxy's SPI DR.
-    # openocd drscan shifts LSB-first, SPI is MSB-first → each byte in the drscan
-    # value is pre bit-reversed; reads come back the same way (upper byte of the
-    # captured hex holds the register value, bit-reversed). A tiny Tcl helper
-    # (reveal_reg) unpacks it back to a human-readable value.
-    resen      = _rev8(0x66)
-    reset_cmd  = _rev8(0x99)
-    wren       = _rev8(0x06)
-    wrsr_all   = _rev8(0x01) | (_rev8(0x00) << 8) | (_rev8(0x00) << 16)
-    ppb_erase  = _rev8(0xE4)
-    rdsr       = _rev8(0x05)
-    rdcr       = _rev8(0x35)
-    helper = (
-        'proc _rev8 {b} { set r 0; for {set i 0} {$i < 8} {incr i} '
-            '{ set r [expr {($r << 1) | (($b >> $i) & 1)}] }; return $r }'
-        ' ; '
-        'proc reveal_reg {label cap_hex} {'
-            ' set cap [expr "0x$cap_hex"];'
-            ' set upper [expr {($cap >> 8) & 0xff}];'
-            ' puts [format "  %s = 0x%02x  (raw drscan = 0x%04x)" $label [_rev8 $upper] $cap] }'
-    )
+    # Uses openocd's `jtagspi cmd <bank> <num_read> <cmd_byte> [data...]` — exposed
+    # natively by the jtagspi driver (openocd >= 0.12). Our earlier raw irscan+drscan
+    # attempts produced 0xffff captures on the Acorn: the jtagspi driver's internal
+    # USER1+DR scan works, but two separate Tcl irscan/drscan calls do not reach the
+    # BSCAN-SPI proxy the same way on these cards. Using `jtagspi cmd` routes through
+    # the same single-queue path that jtagspi_init uses for flash probe.
     script = "; ".join([
-        helper,
         "init",
         f"jtagspi_init 0 {{{proxy}}}",
         'echo "--- pre-unprotect ---"',
-        f'irscan xc7.tap 0x02 ; reveal_reg "RDSR pre " [drscan xc7.tap 16 0x{rdsr:02x}]',
-        f'irscan xc7.tap 0x02 ; reveal_reg "RDCR pre " [drscan xc7.tap 16 0x{rdcr:02x}]',
+        'echo "  RDSR pre : [jtagspi cmd 0 1 0x05]"',
+        'echo "  RDCR pre : [jtagspi cmd 0 1 0x35]"',
         'echo "--- software reset (RESEN 0x66, RESET 0x99) ---"',
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{resen:02x}",
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{reset_cmd:02x}",
+        "jtagspi cmd 0 0 0x66",
+        "jtagspi cmd 0 0 0x99",
         "sleep 50",
         'echo "--- WREN + WRSR SR=0 CR=0 ---"',
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{wren:02x}",
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 24 0x{wrsr_all:06x}",
+        "jtagspi cmd 0 0 0x06",
+        "jtagspi cmd 0 0 0x01 0x00 0x00",
         "sleep 200",
         'echo "--- WREN + PPB_ERASE (0xE4) ---"',
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{wren:02x}",
-        "irscan xc7.tap 0x02", f"drscan xc7.tap 8 0x{ppb_erase:02x}",
+        "jtagspi cmd 0 0 0x06",
+        "jtagspi cmd 0 0 0xe4",
         "sleep 300",
         'echo "--- post-unprotect ---"',
-        f'irscan xc7.tap 0x02 ; reveal_reg "RDSR post" [drscan xc7.tap 16 0x{rdsr:02x}]',
-        f'irscan xc7.tap 0x02 ; reveal_reg "RDCR post" [drscan xc7.tap 16 0x{rdcr:02x}]',
+        'echo "  RDSR post: [jtagspi cmd 0 1 0x05]"',
+        'echo "  RDCR post: [jtagspi cmd 0 1 0x35]"',
         "exit",
     ])
     prog.call([get_openocd_cmd(), "-f", config, "-c", script])
 
 
-def flash_via_openocd(bitstream):
-    """Program *bitstream* to SPI flash via OpenOCD + BSCAN-SPI proxy."""
-    require("openocd")
-    try:
-        from litex.build.openocd import OpenOCD
-    except ImportError:
-        sys.exit("error: --flash needs the 'litex' Python package (for the OpenOCD helper).\n"
-                 "       install it per https://github.com/enjoy-digital/litex/wiki/Installation")
-    print(f"==> Flash {bitstream} via OpenOCD (BSCAN-SPI proxy)")
-    prog = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
-    prog.flash(0, str(bitstream))
+def flash_via_openfpgaloader(bitstream):
+    """Program *bitstream* to SPI flash via openFPGALoader (fast path; requires
+    the flash to be unprotected first — run --unprotect if the card is fresh)."""
+    require("openFPGALoader", "See https://github.com/trabucayre/openFPGALoader")
+    print(f"==> Flash {bitstream} via openFPGALoader")
+    run(["openFPGALoader", "-c", "ft4232", "--fpga-part=xc7a200tfbg484", "-f", str(bitstream)])
 
 
 def main():
@@ -140,7 +127,7 @@ def main():
         description = "Production flash utility for LiteX-Acorn-Baseboard-Mini + SQRL Acorn CLE215(+).",
     )
     parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect + CR via OpenOCD (needed once on fresh Acorns).")
-    parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via OpenOCD.")
+    parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via openFPGALoader (after unlock).")
     parser.add_argument("--bitstream", default=DEFAULT_BITSTREAM, help=f"Path to the .bin bitstream (default: {DEFAULT_BITSTREAM.relative_to(Path(__file__).resolve().parent)}).")
     args = parser.parse_args()
 
@@ -154,7 +141,7 @@ def main():
         bitstream = Path(args.bitstream)
         if not bitstream.exists():
             sys.exit(f"error: bitstream not found: {bitstream}")
-        flash_via_openocd(bitstream)
+        flash_via_openfpgaloader(bitstream)
 
 
 if __name__ == "__main__":

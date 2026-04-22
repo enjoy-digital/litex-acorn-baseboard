@@ -81,7 +81,9 @@ delay between batches (~1 month) and a few days between order and shipment**.
 ### Prerequisites
 - Python 3.
 - Xilinx Vivado (for the Acorn's Artix-7 FPGA).
-- OpenOCD (used by [`flash.py`](flash.py) through a BSCAN-SPI proxy).
+- OpenOCD **0.12+** — [`flash.py --unprotect`](flash.py) uses `jtagspi cmd`, which is
+  missing in 0.11. Set `OPENOCD=/path/to/openocd` to override the system binary.
+- [openFPGALoader](https://github.com/trabucayre/openFPGALoader) — used by `flash.py --flash`.
 - JTAG HS2 cable, or any OpenOCD-compatible cable (not needed for SPI-flash loading over PCIe).
 
 ### Installing LiteX
@@ -94,14 +96,16 @@ $ sudo ./litex_setup.py init install
 https://github.com/enjoy-digital/litex/wiki/Installation
 
 ### First-time flashing (fresh Acorn card)
-SQRL Acorn cards ship with their SPI flash block-protected and, on some units, with the
-Configuration Register set for QPI / 4-byte addressing (legacy from the factory mining
-firmware). [`flash.py`](flash.py) drives OpenOCD + a BSCAN-SPI proxy for both steps — that path
-works even on boards where openFPGALoader's SOJ stub stalls at `Done=0`:
-- `--unprotect` issues a software-reset and writes SR=0x00 + CR=0x00, putting the flash back
-  into a clean, talkable state.
-- `--flash` uses OpenOCD's `jtagspi_program` to erase + program + verify. Acorn bitstreams fit
-  in the first 16 MiB, so we stay in 3-byte addressing.
+SQRL Acorn cards ship with their SPI flash in a factory-locked state — block-protect bits set
+and, on many units, the Configuration Register QUAD bit set (flash stuck in QPI mode). In QPI
+mode openFPGALoader's 1-wire SPI-over-JTAG stub can't even read the flash JEDEC ID, and the FPGA
+fails to finish startup after loading the stub (`Done=0`). [`flash.py`](flash.py) splits the
+job to work around both:
+- `--unprotect` drives **OpenOCD** through a BSCAN-SPI proxy using `jtagspi cmd` to issue a
+  software reset (0x66 → 0x99), then `WRSR SR=0x00 CR=0x00` to clear protection + QPI mode, then
+  `PPB_ERASE` for any non-volatile per-sector locks. SR/CR are read back before and after so
+  you can see the state change.
+- `--flash` uses **openFPGALoader** to erase + program (now that the flash is talkable).
 
 ```sh
 $ ./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
