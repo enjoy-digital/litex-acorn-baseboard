@@ -8,18 +8,20 @@
 
 # Production flash utility for LiteX-Acorn-Baseboard-Mini + SQRL Acorn CLE215(+).
 #
-# SQRL Acorn cards ship with their SPI flash block-protected and, on some
-# units, with the Configuration Register bits set for QPI / 4-byte addressing.
-# The Acorn's SPI flash is a 32 MiB S25FL256S, but bitstreams for this FPGA
-# fit in the first 16 MiB, so we stay in 3-byte addressing land.
+# SQRL Acorn cards ship with their SPI flash block-protected. The Acorn's flash
+# is a 32 MiB S25FL256S, but bitstreams for this FPGA fit in the first 16 MiB,
+# so we stay in 3-byte addressing land.
 #
-# Both --unprotect and --flash drive OpenOCD + a BSCAN-SPI proxy. OpenOCD's
-# BSCAN-USER path works even when the FPGA's full startup sequence stalls on
-# a Done=0 (which openFPGALoader's SOJ stub does on some boards), so this
-# is the robust path that works everywhere we've seen.
+# Two steps:
+#   --unprotect   openocd + BSCAN-SPI proxy: software-reset + WRSR SR=0x00 +
+#                 PPB_ERASE. Touches SR only (CR left as-is). Uses openocd's
+#                 `jtagspi cmd` (openocd >= 0.12).
+#   --flash       openFPGALoader: erase + program, then `--enable-quad` to set
+#                 CR.QUAD=1 — the Acorn boots in Master SPIx4 mode and needs
+#                 QE=1 to fetch its bitstream on power-up.
 #
 # Examples:
-#   ./flash.py --unprotect               # one-time: clear SR/CR protection
+#   ./flash.py --unprotect               # one-time: clear SR block-protect + PPB
 #   ./flash.py --flash                   # program default bitstream
 #   ./flash.py --unprotect --flash       # full first-time bring-up
 #   ./flash.py --flash --bitstream my.bin
@@ -108,7 +110,7 @@ def unprotect_via_openocd():
             "         - install oss-cad-suite (https://github.com/YosysHQ/oss-cad-suite-build)\n"
             "         - build openocd from source and point OPENOCD=/path/to/openocd at it\n"
         )
-    print(f"==> Resetting SPI flash + clearing SR/CR/PPB via OpenOCD (BSCAN-SPI proxy) [{binary}]")
+    print(f"==> Clearing SR block-protect + PPB via OpenOCD (BSCAN-SPI proxy) [{binary}]")
     prog   = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
@@ -118,6 +120,9 @@ def unprotect_via_openocd():
     # USER1+DR scan works, but two separate Tcl irscan/drscan calls do not reach the
     # BSCAN-SPI proxy the same way on these cards. Using `jtagspi cmd` routes through
     # the same single-queue path that jtagspi_init uses for flash probe.
+    #
+    # WRSR is sent with 1 data byte so only SR1 is rewritten — CR1 is left untouched
+    # (openFPGALoader `--enable-quad` in --flash re-arms CR.QUAD=1 for Acorn SPIx4 boot).
     script = "; ".join([
         "init",
         f"jtagspi_init 0 {{{proxy}}}",
@@ -128,9 +133,9 @@ def unprotect_via_openocd():
         "jtagspi cmd 0 0 0x66",
         "jtagspi cmd 0 0 0x99",
         "sleep 50",
-        'echo "--- WREN + WRSR SR=0 CR=0 ---"',
+        'echo "--- WREN + WRSR SR=0 (CR untouched) ---"',
         "jtagspi cmd 0 0 0x06",
-        "jtagspi cmd 0 0 0x01 0x00 0x00",
+        "jtagspi cmd 0 0 0x01 0x00",
         "sleep 200",
         'echo "--- WREN + PPB_ERASE (0xE4) ---"',
         "jtagspi cmd 0 0 0x06",
@@ -172,7 +177,7 @@ def main():
     parser = argparse.ArgumentParser(
         description = "Production flash utility for LiteX-Acorn-Baseboard-Mini + SQRL Acorn CLE215(+).",
     )
-    parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect + CR via OpenOCD (needed once on fresh Acorns).")
+    parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect + PPB via OpenOCD (needed once on fresh Acorns).")
     parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via openFPGALoader (after unlock).")
     parser.add_argument("--bitstream", default=DEFAULT_BITSTREAM, help=f"Path to the .bin bitstream (default: {DEFAULT_BITSTREAM.relative_to(Path(__file__).resolve().parent)}).")
     args = parser.parse_args()

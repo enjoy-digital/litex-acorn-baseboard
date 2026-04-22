@@ -102,14 +102,13 @@ mode openFPGALoader's 1-wire SPI-over-JTAG stub can't even read the flash JEDEC 
 fails to finish startup after loading the stub (`Done=0`). [`flash.py`](flash.py) splits the
 job to work around both:
 - `--unprotect` drives **OpenOCD** through a BSCAN-SPI proxy using `jtagspi cmd` to issue a
-  software reset (0x66 → 0x99), then `WRSR SR=0x00 CR=0x00` to clear protection + QPI mode, then
-  `PPB_ERASE` for any non-volatile per-sector locks. SR/CR are read back before and after so
-  you can see the state change.
+  software reset (0x66 → 0x99), `WRSR SR=0x00` to clear the block-protect bits, and
+  `PPB_ERASE` for any non-volatile per-sector locks. CR is left untouched — `--flash` sets
+  it below. SR/CR are read back before and after so you can see the state change.
 - `--flash` uses **openFPGALoader** to erase + program the flash, then `--enable-quad` to set
-  the flash's QE bit back to 1 — the Acorn boots in Master SPIx4 mode and needs QE=1 to fetch
-  its bitstream on power-up (which is why a naked `--unprotect` + `--flash` without the QE
-  restore leaves the card looking bricked after power-cycle, even though the flash contents
-  are correct).
+  the flash's CR.QUAD bit to 1 — the Acorn boots in Master SPIx4 mode and needs QE=1 to fetch
+  its bitstream on power-up. `--enable-quad` is idempotent, so running `--flash` again on an
+  already-quad-enabled card is fine.
 
 ```sh
 $ ./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
