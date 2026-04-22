@@ -95,16 +95,19 @@ $ sudo ./litex_setup.py init install
 https://github.com/enjoy-digital/litex/wiki/Installation
 
 ### First-time flashing (fresh Acorn card)
-SQRL Acorn cards ship with their SPI flash in a factory-locked state (legacy fallback from their
-crypto-mining firmware). `openFPGALoader`'s spi-over-jtag proxy can't reach the flash in that
-state (`Read ID failed`); the proven workaround is to go through OpenOCD + a BSCAN-SPI proxy for
-the first write, which unlocks the card. Subsequent writes can use the faster `openFPGALoader`
-path. [`flash.py`](flash.py) wraps both:
+SQRL Acorn cards ship with their SPI flash block-protected (legacy fallback from their
+crypto-mining firmware). [`flash.py`](flash.py) splits the job across the two tools that are
+each good at one half of it:
+- `--unprotect` uses **OpenOCD** + a BSCAN-SPI proxy to clear the status-register block-protect
+  bits — the minimum needed so the flash starts talking to the rest of the world.
+- `--flash` uses **openFPGALoader** to erase and program the bitstream (it handles the 32 MiB
+  S25FL256S's 4-byte addressing, which OpenOCD's jtagspi driver doesn't).
+
 ```sh
-$ ./flash.py --unprotect                            # fresh card: unlock + flash via OpenOCD
-$ ./flash.py --flash                                # already-unlocked card: re-flash via openFPGALoader
+$ ./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
+$ ./flash.py --flash                                # re-flash default bitstream
 $ ./flash.py --flash --bitstream my_design.bin      # re-flash your own bitstream
-$ ./flash.py --unprotect --bitstream my_design.bin  # unlock while flashing a custom bitstream
+$ ./flash.py --unprotect                            # just unlock (no programming)
 ```
 The default bitstream in [`prebuilt/`](prebuilt/) is the one we pre-load on boards shipped from the
 webshop — a LiteX SoC with PCIe / Ethernet / SATA support, useful as a sanity check that the board
