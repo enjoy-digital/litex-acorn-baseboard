@@ -1,0 +1,56 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  elaborate:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential make wget
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install LiteX
+        run: |
+          mkdir -p repos
+          pushd repos
+            wget https://raw.githubusercontent.com/enjoy-digital/litex/refs/heads/master/litex_setup.py
+            python3 litex_setup.py --config=standard --init --install --user
+          popd
+
+      - name: Elaborate bring-up designs (no compile)
+        run: |
+          set -e
+          run_design() {
+            echo "::group::$1 — $2"
+            (cd "$1" && eval "$2")
+            echo "::endgroup::"
+          }
+
+          # Mini variant.
+          run_design bringup/mini/acorn_litex_soc          "./sqrl_acorn.py --build --no-compile"
+          run_design bringup/mini/acorn_pcie               "./sqrl_acorn.py --no-compile"
+          run_design bringup/mini/acorn_pcie               "./sqrl_acorn.py --with-pcie --no-compile"
+          run_design bringup/mini/acorn_serdes             "./sqrl_acorn.py"
+          run_design bringup/mini/acorn_sfp_eth_1000basex  "./sqrl_acorn.py --build --no-compile"
+          run_design bringup/mini/acorn_sfp_eth_2500basex  "./sqrl_acorn.py --build --no-compile"
+
+          # Standard variant.
+          run_design bringup/standard/acorn_ecp5_link      "./sqrl_acorn.py"
+          run_design bringup/standard/acorn_ecp5_link      "./litex_acorn_baseboard.py"
+          run_design bringup/standard/acorn_pcie           "./sqrl_acorn.py --no-compile"
+          run_design bringup/standard/acorn_pcie           "./sqrl_acorn.py --with-pcie --no-compile"
+          run_design bringup/standard/acorn_sata           "./acorn.py"
+          run_design bringup/standard/acorn_sfp_eth_1gbps  "./sqrl_acorn.py --no-compile"

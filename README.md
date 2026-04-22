@@ -8,6 +8,7 @@
                                /____/\_,_/___/\__/_.__/\___/\_,_/_/  \_,_/
                                     Copyright 2021-2026 / Enjoy-Digital
 
+[![](https://github.com/enjoy-digital/litex-acorn-baseboard/actions/workflows/ci.yml/badge.svg)](https://github.com/enjoy-digital/litex-acorn-baseboard/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/enjoy-digital/litex-acorn-baseboard)
 [![Buy Hardware](https://img.shields.io/badge/Buy-Hardware-00A6B2)](https://enjoy-digital-shop.myshopify.com/products/litex-acorn-baseboard-mini)
