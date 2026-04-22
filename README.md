@@ -81,7 +81,8 @@ delay between batches (~1 month) and a few days between order and shipment**.
 ### Prerequisites
 - Python 3.
 - Xilinx Vivado (for the Acorn's Artix-7 FPGA).
-- [openFPGALoader](https://github.com/trabucayre/openFPGALoader) (for flashing; also used by [`flash.py`](flash.py)).
+- [openFPGALoader](https://github.com/trabucayre/openFPGALoader) (fast re-flash path in [`flash.py`](flash.py)).
+- OpenOCD (first-time unlock path in [`flash.py`](flash.py), via a BSCAN-SPI proxy).
 - JTAG HS2 cable, or any OpenOCD-compatible cable (not needed for SPI-flash loading over PCIe).
 
 ### Installing LiteX
@@ -94,14 +95,16 @@ $ sudo ./litex_setup.py init install
 https://github.com/enjoy-digital/litex/wiki/Installation
 
 ### First-time flashing (fresh Acorn card)
-SQRL Acorn cards ship with their SPI flash write-protected (legacy fallback from their
-crypto-mining firmware). [`flash.py`](flash.py) automates the unlock + flash procedure using
-`openFPGALoader` only:
+SQRL Acorn cards ship with their SPI flash in a factory-locked state (legacy fallback from their
+crypto-mining firmware). `openFPGALoader`'s spi-over-jtag proxy can't reach the flash in that
+state (`Read ID failed`); the proven workaround is to go through OpenOCD + a BSCAN-SPI proxy for
+the first write, which unlocks the card. Subsequent writes can use the faster `openFPGALoader`
+path. [`flash.py`](flash.py) wraps both:
 ```sh
-$ ./flash.py --unprotect            # one-time: lift the flash write protection
-$ ./flash.py --flash                # flash the default bitstream (prebuilt/litex_acorn_baseboard_mini.bin)
-$ ./flash.py --unprotect --flash    # or do both in one go
-$ ./flash.py --flash --bitstream my_design.bin   # flash your own bitstream
+$ ./flash.py --unprotect                            # fresh card: unlock + flash via OpenOCD
+$ ./flash.py --flash                                # already-unlocked card: re-flash via openFPGALoader
+$ ./flash.py --flash --bitstream my_design.bin      # re-flash your own bitstream
+$ ./flash.py --unprotect --bitstream my_design.bin  # unlock while flashing a custom bitstream
 ```
 The default bitstream in [`prebuilt/`](prebuilt/) is the one we pre-load on boards shipped from the
 webshop — a LiteX SoC with PCIe / Ethernet / SATA support, useful as a sanity check that the board
