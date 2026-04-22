@@ -52,12 +52,22 @@ def require(tool, hint=""):
         sys.exit(f"error: {tool} not found in PATH." + (f" {hint}" if hint else ""))
 
 
+def _rev8(b):
+    """Bit-reverse an 8-bit value (openocd's drscan shifts LSB-first, SPI is MSB-first)."""
+    b = ((b & 0xF0) >> 4) | ((b & 0x0F) << 4)
+    b = ((b & 0xCC) >> 2) | ((b & 0x33) << 2)
+    b = ((b & 0xAA) >> 1) | ((b & 0x55) << 1)
+    return b
+
+
 def unprotect_via_openocd():
     """Clear block-protect bits in the SPI flash via OpenOCD + BSCAN-SPI proxy.
 
-    Only issues WREN + WRSR 0x00 — no erase, no program. Once the block-protect
-    bits are cleared the flash answers JEDEC ID reads and openFPGALoader's SOJ
-    path can take over for the actual erase + program.
+    Sends WREN (0x06) then WRSR 0x00 (clears SRWD + BP[2:0]) directly through
+    the Xilinx USER1 register — openocd 0.11's jtagspi driver has no raw-SPI
+    command and no `protect` op, so we scan the bytes ourselves. No erase, no
+    program; once the block-protect bits are cleared openFPGALoader's SOJ path
+    takes over for the actual erase + program.
     """
     require("openocd")
     try:
@@ -69,11 +79,19 @@ def unprotect_via_openocd():
     prog   = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
+    # USER1 on Xilinx 7-series = IR 0x02 — selects the BSCAN-SPI proxy's SPI DR.
+    # Each drscan is one SPI transaction (CS asserts on SHIFT-DR, deasserts on UPDATE-DR).
+    wren      = _rev8(0x06)
+    wrsr_cmd  = (_rev8(0x00) << 8) | _rev8(0x01)  # 16-bit DR: cmd 0x01, data 0x00
     script = "; ".join([
         "init",
         f"jtagspi_init 0 {{{proxy}}}",
-        "jtagspi cmd 0 0 0x06",           # WREN  (Write Enable)
-        "jtagspi cmd 0 0 0x01 0x00",      # WRSR 0x00 (clear SRWD + BP[2:0])
+        # WREN
+        "irscan xc7.tap 0x02",
+        f"drscan xc7.tap 8 0x{wren:02x}",
+        # WRSR 0x00 — clears SRWD + BP[2:0]
+        "irscan xc7.tap 0x02",
+        f"drscan xc7.tap 16 0x{wrsr_cmd:04x}",
         "sleep 200",
         "exit",
     ])
