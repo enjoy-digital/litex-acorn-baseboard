@@ -8,21 +8,19 @@
 
 # Production flash utility for LiteX-Acorn-Baseboard-Mini + SQRL Acorn CLE215(+).
 #
-# SQRL Acorn cards ship with their SPI flash block-protected — openFPGALoader's
-# own spi-over-jtag proxy can't even read the flash JEDEC ID in that state, so
-# --unprotect-flash has no chance. OpenOCD + a BSCAN-SPI proxy on the other
-# hand can reach the flash fine (Read ID works), but its jtagspi driver doesn't
-# support 4-byte addressing, which the 32 MiB S25FL256S on the Acorn needs for
-# a full program.
+# SQRL Acorn cards ship with their SPI flash block-protected and, on some
+# units, with the Configuration Register bits set for QPI / 4-byte addressing.
+# The Acorn's SPI flash is a 32 MiB S25FL256S, but bitstreams for this FPGA
+# fit in the first 16 MiB, so we stay in 3-byte addressing land.
 #
-# The split here mirrors what actually works: OpenOCD does the minimum — clear
-# the block-protect bits in the status register — then openFPGALoader takes
-# over for the actual erase + program (which it handles correctly, including
-# 4-byte addressing).
+# Both --unprotect and --flash drive OpenOCD + a BSCAN-SPI proxy. OpenOCD's
+# BSCAN-USER path works even when the FPGA's full startup sequence stalls on
+# a Done=0 (which openFPGALoader's SOJ stub does on some boards), so this
+# is the robust path that works everywhere we've seen.
 #
 # Examples:
-#   ./flash.py --unprotect               # one-time: clear block-protect via openocd
-#   ./flash.py --flash                   # program default bitstream via openFPGALoader
+#   ./flash.py --unprotect               # one-time: clear SR/CR protection
+#   ./flash.py --flash                   # program default bitstream
 #   ./flash.py --unprotect --flash       # full first-time bring-up
 #   ./flash.py --flash --bitstream my.bin
 
@@ -32,8 +30,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_CABLE     = "ft4232"
-DEFAULT_FPGA_PART = "xc7a200tfbg484"
 DEFAULT_BITSTREAM = Path(__file__).resolve().parent / "prebuilt" / "litex_acorn_baseboard_mini.bin"
 
 # OpenOCD assets used for the unlock path. LiteX's OpenOCD helper auto-downloads
@@ -63,11 +59,10 @@ def _rev8(b):
 def unprotect_via_openocd():
     """Clear block-protect bits in the SPI flash via OpenOCD + BSCAN-SPI proxy.
 
-    Sends WREN (0x06) then WRSR 0x00 (clears SRWD + BP[2:0]) directly through
-    the Xilinx USER1 register — openocd 0.11's jtagspi driver has no raw-SPI
+    Sends software-reset + WRSR with SR=0x00, CR=0x00 directly through the
+    Xilinx USER1 register — openocd 0.11's jtagspi driver has no raw-SPI
     command and no `protect` op, so we scan the bytes ourselves. No erase, no
-    program; once the block-protect bits are cleared openFPGALoader's SOJ path
-    takes over for the actual erase + program.
+    program. Run this once on a fresh Acorn so subsequent --flash calls work.
     """
     require("openocd")
     try:
@@ -110,21 +105,26 @@ def unprotect_via_openocd():
     prog.call([get_openocd_cmd(), "-f", config, "-c", script])
 
 
-def flash_via_openfpgaloader(cable, fpga_part, bitstream):
-    require("openFPGALoader", "See https://github.com/trabucayre/openFPGALoader")
-    print(f"==> Flash {bitstream} via openFPGALoader")
-    run(["openFPGALoader", "-c", cable, f"--fpga-part={fpga_part}", "-f", str(bitstream)])
+def flash_via_openocd(bitstream):
+    """Program *bitstream* to SPI flash via OpenOCD + BSCAN-SPI proxy."""
+    require("openocd")
+    try:
+        from litex.build.openocd import OpenOCD
+    except ImportError:
+        sys.exit("error: --flash needs the 'litex' Python package (for the OpenOCD helper).\n"
+                 "       install it per https://github.com/enjoy-digital/litex/wiki/Installation")
+    print(f"==> Flash {bitstream} via OpenOCD (BSCAN-SPI proxy)")
+    prog = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
+    prog.flash(0, str(bitstream))
 
 
 def main():
     parser = argparse.ArgumentParser(
         description = "Production flash utility for LiteX-Acorn-Baseboard-Mini + SQRL Acorn CLE215(+).",
     )
-    parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect via OpenOCD (needed once on fresh Acorns).")
-    parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via openFPGALoader.")
+    parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect + CR via OpenOCD (needed once on fresh Acorns).")
+    parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via OpenOCD.")
     parser.add_argument("--bitstream", default=DEFAULT_BITSTREAM, help=f"Path to the .bin bitstream (default: {DEFAULT_BITSTREAM.relative_to(Path(__file__).resolve().parent)}).")
-    parser.add_argument("--cable",     default=DEFAULT_CABLE,     help=f"openFPGALoader cable (default: {DEFAULT_CABLE}).")
-    parser.add_argument("--fpga-part", default=DEFAULT_FPGA_PART, help=f"FPGA part (default: {DEFAULT_FPGA_PART}).")
     args = parser.parse_args()
 
     if not (args.unprotect or args.flash):
@@ -137,7 +137,7 @@ def main():
         bitstream = Path(args.bitstream)
         if not bitstream.exists():
             sys.exit(f"error: bitstream not found: {bitstream}")
-        flash_via_openfpgaloader(args.cable, args.fpga_part, bitstream)
+        flash_via_openocd(bitstream)
 
 
 if __name__ == "__main__":

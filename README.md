@@ -81,8 +81,7 @@ delay between batches (~1 month) and a few days between order and shipment**.
 ### Prerequisites
 - Python 3.
 - Xilinx Vivado (for the Acorn's Artix-7 FPGA).
-- [openFPGALoader](https://github.com/trabucayre/openFPGALoader) (fast re-flash path in [`flash.py`](flash.py)).
-- OpenOCD (first-time unlock path in [`flash.py`](flash.py), via a BSCAN-SPI proxy).
+- OpenOCD (used by [`flash.py`](flash.py) through a BSCAN-SPI proxy).
 - JTAG HS2 cable, or any OpenOCD-compatible cable (not needed for SPI-flash loading over PCIe).
 
 ### Installing LiteX
@@ -95,13 +94,14 @@ $ sudo ./litex_setup.py init install
 https://github.com/enjoy-digital/litex/wiki/Installation
 
 ### First-time flashing (fresh Acorn card)
-SQRL Acorn cards ship with their SPI flash block-protected (legacy fallback from their
-crypto-mining firmware). [`flash.py`](flash.py) splits the job across the two tools that are
-each good at one half of it:
-- `--unprotect` uses **OpenOCD** + a BSCAN-SPI proxy to clear the status-register block-protect
-  bits — the minimum needed so the flash starts talking to the rest of the world.
-- `--flash` uses **openFPGALoader** to erase and program the bitstream (it handles the 32 MiB
-  S25FL256S's 4-byte addressing, which OpenOCD's jtagspi driver doesn't).
+SQRL Acorn cards ship with their SPI flash block-protected and, on some units, with the
+Configuration Register set for QPI / 4-byte addressing (legacy from the factory mining
+firmware). [`flash.py`](flash.py) drives OpenOCD + a BSCAN-SPI proxy for both steps — that path
+works even on boards where openFPGALoader's SOJ stub stalls at `Done=0`:
+- `--unprotect` issues a software-reset and writes SR=0x00 + CR=0x00, putting the flash back
+  into a clean, talkable state.
+- `--flash` uses OpenOCD's `jtagspi_program` to erase + program + verify. Acorn bitstreams fit
+  in the first 16 MiB, so we stay in 3-byte addressing.
 
 ```sh
 $ ./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
