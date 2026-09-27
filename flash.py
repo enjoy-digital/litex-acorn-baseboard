@@ -38,7 +38,7 @@ DEFAULT_BITSTREAM = Path(__file__).resolve().parent / "prebuilt" / "litex_acorn_
 
 # OpenOCD assets used for the unlock path. LiteX's OpenOCD helper auto-downloads
 # both files on first use from its config/flash-proxy repositories.
-OPENOCD_CONFIG = "openocd_xc7_ft4232.cfg"
+OPENOCD_CONFIG = "openocd_xc7_ft2232.cfg"
 FLASH_PROXY    = "bscan_spi_xc7a200t.bit"
 
 
@@ -166,7 +166,7 @@ def flash_via_openfpgaloader(bitstream):
     print(f"==> Flash {bitstream} via openFPGALoader (+ re-enable QUAD for SPIx4 boot)")
     run([
         "openFPGALoader",
-        "-c", "ft4232",
+        "-c", "ft2232",
         "--fpga-part=xc7a200tfbg484",
         "-f", str(bitstream),
         "--enable-quad",
