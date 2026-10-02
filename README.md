@@ -136,8 +136,9 @@ See [Designs & Apps](#-designs--apps) below for more involved examples (Linux, P
   variant schematic.
 - [`acorn-baseboard-mini-top.png`](hardware/acorn-baseboard-mini-top.png) — Mini variant PCB top
   render (connectors/jumpers references).
+- [`acorn-baseboard-mini-3d.png`](hardware/acorn-baseboard-mini-3d.png) — Mini variant 3D view.
 - [`acorn-baseboard-mini.step`](hardware/acorn-baseboard-mini.step) — Mini variant 3D model (STEP,
-  generated from KiCad; M.2/SFP/SATA/USB-C connector models not included).
+  generated from KiCad; U4 RECOM DC/DC and U9 FUSB302 are simplified models).
 - [`acorn-baseboard-2021-07-02.pdf`](hardware/acorn-baseboard-2021-07-02.pdf) — Standard variant
   schematic.
 - [`acorn.pdf`](hardware/acorn.pdf) — SQRL Acorn card schematic (for reference).
