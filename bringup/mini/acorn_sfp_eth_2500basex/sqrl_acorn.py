@@ -26,8 +26,6 @@ from litex.soc.integration.builder import *
 
 from litex.soc.cores.clock import *
 from litex.soc.cores.led import LedChaser
-from litex.soc.cores.xadc import XADC
-from litex.soc.cores.dna  import DNA
 
 from litex.build.generic_platform import Subsignal, Pins
 from liteeth.phy.a7_gtp import QPLLSettings, QPLL
