@@ -25,6 +25,7 @@
 #   ./flash.py --flash                   # program default bitstream
 #   ./flash.py --unprotect --flash       # full first-time bring-up
 #   ./flash.py --flash --bitstream my.bin
+#   ./flash.py --flash --ftdi-chip=ft232 # force Digilent HS2 cable on the Acorn JTAG header
 
 import argparse
 import os
@@ -41,10 +42,19 @@ DEFAULT_BITSTREAM = Path(__file__).resolve().parent / "prebuilt" / "litex_acorn_
 # config depends on the FTDI chip (see detect_ftdi_chip).
 FLASH_PROXY    = "bscan_spi_xc7a200t.bit"
 
-# LiteX-Acorn-Baseboard-Mini revisions use either a FT2232H or a FT4232H (USB VID:PID).
+# LiteX-Acorn-Baseboard-Mini revisions use either a FT2232H or a FT4232H (USB VID:PID). An external
+# Digilent HS2 cable (FT232H) connected to the Acorn's JTAG header is also supported.
 FTDI_CHIPS = {
     "0403:6010": "ft2232",
     "0403:6011": "ft4232",
+    "0403:6014": "ft232",
+}
+
+# openFPGALoader cable for each FTDI chip.
+OFL_CABLES = {
+    "ft2232": "ft2232",
+    "ft4232": "ft4232",
+    "ft232":  "digilent_hs2",
 }
 
 
@@ -59,12 +69,12 @@ def require(tool, hint=""):
 
 
 def detect_ftdi_chip():
-    """Detect the baseboard's FTDI chip (ft2232 or ft4232) from lsusb."""
+    """Detect the baseboard's FTDI chip (ft2232/ft4232) or Digilent HS2 cable (ft232) from lsusb."""
     require("lsusb", "Install usbutils or pass --ftdi-chip.")
     lsusb_log = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
     found = [chip for usb_id, chip in FTDI_CHIPS.items() if f"ID {usb_id}" in lsusb_log]
     if not found:
-        sys.exit("error: no compatible FTDI device (FT2232H/FT4232H) found, check USB connection.")
+        sys.exit("error: no compatible FTDI device (FT2232H/FT4232H/HS2) found, check USB connection.")
     if len(found) > 1:
         sys.exit("error: several FTDI devices found ({}), select one with --ftdi-chip.".format(", ".join(found)))
     print(f"==> Detected {found[0].upper()} FTDI chip")
@@ -185,7 +195,7 @@ def flash_via_openfpgaloader(bitstream, ftdi_chip):
     print(f"==> Flash {bitstream} via openFPGALoader (+ re-enable QUAD for SPIx4 boot)")
     run([
         "openFPGALoader",
-        "-c", ftdi_chip,
+        "-c", OFL_CABLES[ftdi_chip],
         "--fpga-part=xc7a200tfbg484",
         "-f", str(bitstream),
         "--enable-quad",
@@ -198,7 +208,7 @@ def main():
     )
     parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect + PPB via OpenOCD (needed once on fresh Acorns).")
     parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via openFPGALoader (after unlock).")
-    parser.add_argument("--ftdi-chip", default="auto", choices=["auto"] + list(FTDI_CHIPS.values()), help="Baseboard FTDI chip (default: auto-detected from lsusb).")
+    parser.add_argument("--ftdi-chip", default="auto", choices=["auto"] + list(FTDI_CHIPS.values()), help="FTDI chip: ft2232/ft4232 (baseboard) or ft232 (Digilent HS2 cable) (default: auto-detected from lsusb).")
     parser.add_argument("--bitstream", default=DEFAULT_BITSTREAM, help=f"Path to the .bin bitstream (default: {DEFAULT_BITSTREAM.relative_to(Path(__file__).resolve().parent)}).")
     args = parser.parse_args()
 

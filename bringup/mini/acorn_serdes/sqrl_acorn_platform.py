@@ -132,12 +132,13 @@ class Platform(Xilinx7SeriesPlatform):
 
     def detect_ftdi_chip(self):
         # LiteX-Acorn-Baseboard-Mini revisions use either a FT2232H or a FT4232H, detect it from its
-        # USB VID:PID.
+        # USB VID:PID. An external Digilent HS2 cable (FT232H) on the Acorn's JTAG header is also
+        # supported.
         lsusb_log = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
-        for usb_id, ftdi_chip in {"0403:6010": "ft2232", "0403:6011": "ft4232"}.items():
+        for usb_id, ftdi_chip in {"0403:6010": "ft2232", "0403:6011": "ft4232", "0403:6014": "ft232"}.items():
             if f"ID {usb_id}" in lsusb_log:
                 return ftdi_chip
-        raise RuntimeError("No compatible FTDI device (FT2232H/FT4232H) found.")
+        raise RuntimeError("No compatible FTDI device (FT2232H/FT4232H/HS2) found.")
 
     def create_programmer(self, name='openocd'):
         if name == 'openocd':
