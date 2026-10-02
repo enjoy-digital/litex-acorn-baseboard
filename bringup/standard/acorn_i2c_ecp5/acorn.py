@@ -1,3 +1,4 @@
+import os
 import argparse
 from litex_boards.platforms import sqrl_acorn
 from litex_boards.targets.sqrl_acorn import CRG as _CRG
@@ -7,7 +8,7 @@ from litex.soc.integration.soc_core import SoCCore, soc_core_argdict, soc_core_a
 from litex.soc.integration.builder import Builder, builder_argdict, builder_args
 from litex.soc.cores.bitbang import I2CMaster
 from litex.soc.cores.led import LedChaser
-from litex.soc.cores.cpu import VexRiscv
+from litex.soc.cores.cpu.vexriscv import VexRiscv
 
 
 _i2c_io = [
@@ -22,7 +23,7 @@ _i2c_io = [
 class I2CTestSoC(SoCCore):
     def __init__(self, platform, cpu, **kwargs):
         sys_clk_freq = int(50e6)
-        SoCCore.__init__(self, platform, cpu_type=cpu.name, clk_freq=sys_clk_freq, **kwargs)
+        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, **kwargs)
         self.submodules.crg = _CRG(platform, sys_clk_freq)
         self.add_constant("ROM_BOOT_ADDRESS", self.mem_map['main_ram'])
         self.submodules.i2c = I2CMaster(platform.request("i2c"))
@@ -41,13 +42,14 @@ def main():
     builder_kwargs = builder_argdict(args)
 
     cpu = VexRiscv
+    soc_kwargs["cpu_type"] = cpu.name
     soc_kwargs['integrated_sram_size'] = 16 * 1024
     soc_kwargs["integrated_main_ram_size"] = 16 * 1024
 
     output_dir = builder_kwargs['output_dir'] = 'build'
     fw_file = os.path.join(output_dir, "software", "firmware", "firmware.bin")
     try:
-        soc_kwargs['integrated_main_ram_init'] = get_mem_data(fw_file, cpu.endianness)
+        soc_kwargs['integrated_main_ram_init'] = get_mem_data(fw_file, endianness=cpu.endianness)
     except OSError:
         pass
 

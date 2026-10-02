@@ -41,6 +41,7 @@ jobs:
 
           # Mini variant.
           run_design bringup/mini/acorn_litex_soc          "./sqrl_acorn.py --build --no-compile"
+          run_design bringup/mini/acorn_litex_soc          "./sqrl_acorn.py --build --no-compile --with-pcie"
           run_design bringup/mini/acorn_pcie               "./sqrl_acorn.py --no-compile"
           run_design bringup/mini/acorn_pcie               "./sqrl_acorn.py --with-pcie --no-compile"
           run_design bringup/mini/acorn_serdes             "./sqrl_acorn.py"
@@ -52,5 +53,7 @@ jobs:
           run_design bringup/standard/acorn_ecp5_link      "./litex_acorn_baseboard.py"
           run_design bringup/standard/acorn_pcie           "./sqrl_acorn.py --no-compile"
           run_design bringup/standard/acorn_pcie           "./sqrl_acorn.py --with-pcie --no-compile"
+          run_design bringup/standard/acorn_i2c_ecp5       "python3 acorn.py --no-compile"
           run_design bringup/standard/acorn_sata           "./acorn.py"
+          run_design bringup/standard/acorn_sata           "./acorn.py --with-analyzer"
           run_design bringup/standard/acorn_sfp_eth_1gbps  "./sqrl_acorn.py --no-compile"
