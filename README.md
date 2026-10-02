@@ -134,6 +134,8 @@ See [Designs & Apps](#-designs--apps) below for more involved examples (Linux, P
 ### Schematics — [`hardware/`](hardware/)
 - [`acorn-baseboard-mini-2022-06-06.pdf`](hardware/acorn-baseboard-mini-2022-06-06.pdf) — Mini
   variant schematic.
+- [`README.md`](hardware/README.md) — Mini variant connectors/jumpers reference (pinouts, power
+  and SFP I2C jumpers settings).
 - [`acorn-baseboard-mini-top.png`](hardware/acorn-baseboard-mini-top.png) — Mini variant PCB top
   render (connectors/jumpers references).
 - [`acorn-baseboard-mini-3d.png`](hardware/acorn-baseboard-mini-3d.png) — Mini variant 3D view.
