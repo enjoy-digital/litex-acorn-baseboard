@@ -80,3 +80,13 @@ Notes:
 - The SFP I2C buses are connected to the PCIe SMBus and, through a PCA9306 level-shifter (U1), to
   the M.2 SMBus (`sfp_i2c` in the gateware). Since SFP modules all use the same I2C addresses
   (0x50/0x51), only close the jumpers of one SFP at a time (JP1+JP4 for SFP0 or JP5+JP6 for SFP1).
+
+[> Known Issues
+---------------
+
+**SFP TX_DISABLE pull-downs too weak** ([#22](https://github.com/enjoy-digital/litex-acorn-baseboard/issues/22)):
+TX_DISABLE (SFP pin 3) is only pulled down to GND by a 4.7k resistor (R75 for SFP0/J3, R7 for
+SFP1/J8). SFF-8431 modules have an internal 4.7k-10k pull-up on TX_DISABLE, so with some modules
+(mostly copper modules with an internal PHY) TX_DISABLE sits around 1.65V, between the logic
+levels, and the module behaves erratically. Replacing R75/R7 with a 1k resistor (or lower) keeps
+TX_DISABLE below 0.8V and fixes it.
