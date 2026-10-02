@@ -78,7 +78,7 @@ class BaseSoC(SoCMini):
                 Subsignal("txp", Pins("B4")),
                 Subsignal("txn", Pins("A4")),
                 Subsignal("rxp", Pins("B8")),
-                Subsignal("rxn", Pins("C8")),
+                Subsignal("rxn", Pins("A8")),
             ),
         ]
         platform.add_extension(_eth_io)
