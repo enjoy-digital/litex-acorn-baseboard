@@ -29,7 +29,7 @@ Two variants exist:
 - 2 SFP connectors.
 - A SATA connector.
 - 2 PicoEzMate connectors (GPIOs).
-- 2 USB-C connectors: one for JTAG/UART (onboard FT2232H) and one for power (onboard 3.3V regulator).
+- 2 USB-C connectors: one for JTAG/UART (onboard FT2232H or FT4232H depending on the revision, auto-detected by the scripts) and one for power (onboard 3.3V regulator).
 
 **Standard variant** — internal development only, not commercialized:
 

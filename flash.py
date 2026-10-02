@@ -37,9 +37,15 @@ from pathlib import Path
 DEFAULT_BITSTREAM = Path(__file__).resolve().parent / "prebuilt" / "litex_acorn_baseboard_mini.bin"
 
 # OpenOCD assets used for the unlock path. LiteX's OpenOCD helper auto-downloads
-# both files on first use from its config/flash-proxy repositories.
-OPENOCD_CONFIG = "openocd_xc7_ft4232.cfg"
+# both files on first use from its config/flash-proxy repositories. The OpenOCD
+# config depends on the FTDI chip (see detect_ftdi_chip).
 FLASH_PROXY    = "bscan_spi_xc7a200t.bit"
+
+# LiteX-Acorn-Baseboard-Mini revisions use either a FT2232H or a FT4232H (USB VID:PID).
+FTDI_CHIPS = {
+    "0403:6010": "ft2232",
+    "0403:6011": "ft4232",
+}
 
 
 def run(cmd):
@@ -50,6 +56,19 @@ def run(cmd):
 def require(tool, hint=""):
     if shutil.which(tool) is None:
         sys.exit(f"error: {tool} not found in PATH." + (f" {hint}" if hint else ""))
+
+
+def detect_ftdi_chip():
+    """Detect the baseboard's FTDI chip (ft2232 or ft4232) from lsusb."""
+    require("lsusb", "Install usbutils or pass --ftdi-chip.")
+    lsusb_log = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
+    found = [chip for usb_id, chip in FTDI_CHIPS.items() if f"ID {usb_id}" in lsusb_log]
+    if not found:
+        sys.exit("error: no compatible FTDI device (FT2232H/FT4232H) found, check USB connection.")
+    if len(found) > 1:
+        sys.exit("error: several FTDI devices found ({}), select one with --ftdi-chip.".format(", ".join(found)))
+    print(f"==> Detected {found[0].upper()} FTDI chip")
+    return found[0]
 
 
 def _find_openocd():
@@ -87,7 +106,7 @@ def _find_openocd():
     return None, None
 
 
-def unprotect_via_openocd():
+def unprotect_via_openocd(ftdi_chip):
     """Clear block-protect bits in the SPI flash via OpenOCD + BSCAN-SPI proxy.
 
     Sends software-reset + WRSR with SR=0x00, CR=0x00 directly through the
@@ -111,7 +130,7 @@ def unprotect_via_openocd():
             "         - build openocd from source and point OPENOCD=/path/to/openocd at it\n"
         )
     print(f"==> Clearing SR block-protect + PPB via OpenOCD (BSCAN-SPI proxy) [{binary}]")
-    prog   = OpenOCD(OPENOCD_CONFIG, FLASH_PROXY)
+    prog   = OpenOCD(f"openocd_xc7_{ftdi_chip}.cfg", FLASH_PROXY)
     config = prog.find_config()
     proxy  = prog.find_flash_proxy()
     # Uses openocd's `jtagspi cmd <bank> <num_read> <cmd_byte> [data...]` — exposed
@@ -153,7 +172,7 @@ def unprotect_via_openocd():
     prog.call(cmd)
 
 
-def flash_via_openfpgaloader(bitstream):
+def flash_via_openfpgaloader(bitstream, ftdi_chip):
     """Program *bitstream* to SPI flash via openFPGALoader (fast path; requires
     the flash to be unprotected first — run --unprotect if the card is fresh).
 
@@ -166,7 +185,7 @@ def flash_via_openfpgaloader(bitstream):
     print(f"==> Flash {bitstream} via openFPGALoader (+ re-enable QUAD for SPIx4 boot)")
     run([
         "openFPGALoader",
-        "-c", "ft4232",
+        "-c", ftdi_chip,
         "--fpga-part=xc7a200tfbg484",
         "-f", str(bitstream),
         "--enable-quad",
@@ -179,20 +198,23 @@ def main():
     )
     parser.add_argument("--unprotect", action="store_true",       help="Clear SPI-flash block-protect + PPB via OpenOCD (needed once on fresh Acorns).")
     parser.add_argument("--flash",     action="store_true",       help="Flash the bitstream via openFPGALoader (after unlock).")
+    parser.add_argument("--ftdi-chip", default="auto", choices=["auto"] + list(FTDI_CHIPS.values()), help="Baseboard FTDI chip (default: auto-detected from lsusb).")
     parser.add_argument("--bitstream", default=DEFAULT_BITSTREAM, help=f"Path to the .bin bitstream (default: {DEFAULT_BITSTREAM.relative_to(Path(__file__).resolve().parent)}).")
     args = parser.parse_args()
 
     if not (args.unprotect or args.flash):
         parser.error("specify at least one of --unprotect / --flash.")
 
+    ftdi_chip = detect_ftdi_chip() if args.ftdi_chip == "auto" else args.ftdi_chip
+
     if args.unprotect:
-        unprotect_via_openocd()
+        unprotect_via_openocd(ftdi_chip)
 
     if args.flash:
         bitstream = Path(args.bitstream)
         if not bitstream.exists():
             sys.exit(f"error: bitstream not found: {bitstream}")
-        flash_via_openfpgaloader(bitstream)
+        flash_via_openfpgaloader(bitstream, ftdi_chip)
 
 
 if __name__ == "__main__":

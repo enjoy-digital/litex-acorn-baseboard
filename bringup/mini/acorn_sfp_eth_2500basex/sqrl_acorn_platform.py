@@ -11,6 +11,8 @@
 # The 101 variant is eguivalent to the LiteFury and 215 variant equivalent to the NiteFury from
 # RHSResearchLLC that are documented at: https://github.com/RHSResearchLLC/NiteFury-and-LiteFury.
 
+import subprocess
+
 from litex.build.generic_platform import *
 from litex.build.xilinx import Xilinx7SeriesPlatform, VivadoProgrammer
 from litex.build.openocd import OpenOCD
@@ -145,9 +147,18 @@ class Platform(Xilinx7SeriesPlatform):
             "write_cfgmem -force -format bin -interface spix4 -size 16 -loadbit \"up 0x0 {build_name}_fallback.bit\" -file {build_name}_fallback.bin"
         ]
 
+    def detect_ftdi_chip(self):
+        # LiteX-Acorn-Baseboard-Mini revisions use either a FT2232H or a FT4232H, detect it from its
+        # USB VID:PID.
+        lsusb_log = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
+        for usb_id, ftdi_chip in {"0403:6010": "ft2232", "0403:6011": "ft4232"}.items():
+            if f"ID {usb_id}" in lsusb_log:
+                return ftdi_chip
+        raise RuntimeError("No compatible FTDI device (FT2232H/FT4232H) found.")
+
     def create_programmer(self, name='openocd'):
         if name == 'openocd':
-            return OpenOCD("openocd_xc7_ft4232.cfg", "bscan_spi_xc7a200t.bit")
+            return OpenOCD(f"openocd_xc7_{self.detect_ftdi_chip()}.cfg", "bscan_spi_xc7a200t.bit")
         elif name == 'vivado':
             # TODO: some board versions may have s25fl128s
             return VivadoProgrammer(flash_part='s25fl256sxxxxxx0-spi-x1_x2_x4')
