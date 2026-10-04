@@ -87,10 +87,10 @@ delay between batches (~1 month) and a few days between order and shipment**.
 - JTAG HS2 cable, or any OpenOCD-compatible cable (not needed for SPI-flash loading over PCIe).
 
 ### Installing LiteX
-```sh
-$ wget https://raw.githubusercontent.com/enjoy-digital/litex/master/litex_setup.py
-$ chmod +x litex_setup.py
-$ sudo ./litex_setup.py init install
+```bash
+wget https://raw.githubusercontent.com/enjoy-digital/litex/master/litex_setup.py
+chmod +x litex_setup.py
+sudo ./litex_setup.py init install
 ```
 ... or follow the installation instructions from the LiteX Wiki:
 https://github.com/enjoy-digital/litex/wiki/Installation
@@ -110,11 +110,11 @@ job to work around both:
   its bitstream on power-up. `--enable-quad` is idempotent, so running `--flash` again on an
   already-quad-enabled card is fine.
 
-```sh
-$ ./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
-$ ./flash.py --flash                                # re-flash default bitstream
-$ ./flash.py --flash --bitstream my_design.bin      # re-flash your own bitstream
-$ ./flash.py --unprotect                            # just unlock (no programming)
+```bash
+./flash.py --unprotect --flash                    # one-shot fresh-card bring-up
+./flash.py --flash                                # re-flash default bitstream
+./flash.py --flash --bitstream my_design.bin      # re-flash your own bitstream
+./flash.py --unprotect                            # just unlock (no programming)
 ```
 The default bitstream in [`prebuilt/`](prebuilt/) is the one we pre-load on boards shipped from the
 webshop — a LiteX SoC with PCIe / Ethernet / SATA support, useful as a sanity check that the board
@@ -122,9 +122,9 @@ is alive before flashing your own design.
 
 ### First build (Mini variant)
 A good starting point is the LiteX-Boards target, which covers SoC / DRAM / PCIe / Ethernet / SATA:
-```sh
-$ cd litex-boards/litex_boards/targets/
-$ ./litex_acorn_baseboard_mini.py --with-pcie --build --load
+```bash
+cd litex-boards/litex_boards/targets/
+./litex_acorn_baseboard_mini.py --with-pcie --build --load
 ```
 See [Designs & Apps](#-designs--apps) below for more involved examples (Linux, PTP, SerDes…).
 
