@@ -12,5 +12,5 @@
 
 [> Check
 --------
-ping 192.168.1.50 responding.
-ping 192.168.1.51 responding.
+- ping 192.168.1.50 responding on SFP0.
+- ping 192.168.1.51 responding on SPF1.
