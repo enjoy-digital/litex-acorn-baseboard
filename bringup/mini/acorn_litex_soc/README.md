@@ -6,8 +6,8 @@
 
 [> Build
 --------
-./sqrl_acorn.py --build --load
-litex_term /dev/ttyUSBX (X=2 if only the baseboard connected).
+- ./sqrl_acorn.py --build --load
+- litex_term /dev/ttyUSBX (X=2 if only the baseboard connected).
 
 [> Check
 --------
