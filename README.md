@@ -126,6 +126,8 @@ A good starting point is the LiteX-Boards target, which covers SoC / DRAM / PCIe
 cd litex-boards/litex_boards/targets/
 ./litex_acorn_baseboard_mini.py --with-pcie --build --load
 ```
+At this stage, if everything works correctly, you should see "LED Phaser" (chaser/wave) animation across LEDs A1 through A4.
+
 See [Designs & Apps](#-designs--apps) below for more involved examples (Linux, PTP, SerDes…).
 
 [> Repository Layout
