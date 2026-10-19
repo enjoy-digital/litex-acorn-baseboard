@@ -119,9 +119,13 @@ job to work around both:
 The default bitstream in [`prebuilt/`](prebuilt/) is the one we pre-load on boards shipped from the
 webshop — a LiteX SoC with PCIe / Ethernet / SATA support, useful as a sanity check that the board
 is alive before flashing your own design.
+This prebuilt image is a production build; its exact source revisions and build flags are not
+published, so it is not meant to be rebuilt byte-for-byte. The [First build](#first-build-mini-variant)
+below produces a comparable reference SoC, not an identical bitstream.
 
 ### First build (Mini variant)
-A good starting point is the LiteX-Boards target, which covers SoC / DRAM / PCIe / Ethernet / SATA:
+A good starting point is the LiteX-Boards target, which covers SoC / DRAM / PCIe / Ethernet / SATA
+(the command below enables PCIe only; see `--help` for the Ethernet / SATA options):
 ```bash
 cd litex-boards/litex_boards/targets/
 ./litex_acorn_baseboard_mini.py --with-pcie --build --load
