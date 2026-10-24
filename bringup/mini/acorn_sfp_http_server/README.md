@@ -33,7 +33,11 @@ Use `--ip-address`, `--mac-address` and `--index` to change the IP/MAC addresses
 [> Simulation
 -------------
 The design can also be simulated with Verilator and reached from the host through a tap0 interface
-(requires root, Verilator, libevent, json-c and pythondata-misc-tapcfg):
+(requires Verilator, libevent, json-c and pythondata-misc-tapcfg):
 
-- ./sim.py
+- ./sim.py (run as a normal user: LiteX starts the simulator with sudo to create tap0 and may ask for
+  your password).
 - curl http[]()://192.168.1.50
+
+If the board is also connected on 192.168.1.0/24, use another subnet for the simulation to avoid
+conflicts: ./sim.py --ip-address=10.0.50.50 --remote-ip=10.0.50.100
