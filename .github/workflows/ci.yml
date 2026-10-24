@@ -47,6 +47,7 @@ jobs:
           run_design bringup/mini/acorn_serdes             "./sqrl_acorn.py"
           run_design bringup/mini/acorn_sfp_eth_1000basex  "./sqrl_acorn.py --build --no-compile"
           run_design bringup/mini/acorn_sfp_eth_2500basex  "./sqrl_acorn.py --build --no-compile"
+          run_design bringup/mini/acorn_sfp_http_server    "./sqrl_acorn.py --build --no-compile"
 
           # Standard variant.
           run_design bringup/standard/acorn_ecp5_link      "./sqrl_acorn.py"
