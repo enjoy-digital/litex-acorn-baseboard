@@ -28,7 +28,7 @@ Use `--ip-address`, `--mac-address` and `--index` to change the IP/MAC addresses
 [> Check
 --------
 - ping 192.168.1.50 responding.
-- curl http://192.168.1.50 (or http://192.168.1.50 in a web browser) showing the LiteX page.
+- curl http[]()://192.168.1.50 (or http://192.168.1.50 in a web browser) showing the LiteX page.
 
 [> Simulation
 -------------
