@@ -105,7 +105,6 @@ class BaseSoC(SoCMini):
         platform.add_platform_command("set_property SEVERITY {{Warning}} [get_drc_checks REQP-49]")
         self.add_etherbone(name="etherbone0",
             phy         = self.ethphy0,
-            phy_cd      = "ethphy0_eth",
             mac_address = 0x10e2d5000000,
             ip_address  = "192.168.1.50",
             data_width  = 32,
