@@ -35,5 +35,5 @@ Use `--ip-address`, `--mac-address` and `--index` to change the IP/MAC addresses
 The design can also be simulated with Verilator and reached from the host through a tap0 interface
 (requires root, Verilator, libevent, json-c and pythondata-misc-tapcfg):
 
-- sudo ./sim.py
+- ./sim.py
 - curl http://192.168.1.50
