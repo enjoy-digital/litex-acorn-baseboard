@@ -161,6 +161,7 @@ minimal examples when you want to reproduce only one feature.
 - [`acorn_serdes/`](bringup/mini/acorn_serdes/) — SerDes PRBS/BER test (PCIe and SFP loopback).
 - [`acorn_sfp_eth_1000basex/`](bringup/mini/acorn_sfp_eth_1000basex/) — 1000BASE-X Ethernet over SFP.
 - [`acorn_sfp_eth_2500basex/`](bringup/mini/acorn_sfp_eth_2500basex/) — 2500BASE-X Ethernet over SFP.
+- [`acorn_sfp_http_server/`](bringup/mini/acorn_sfp_http_server/) — Gateware-only HTTP server over SFP (no CPU).
 
 **Standard variant** — [`bringup/standard/`](bringup/standard/):
 - [`acorn_pcie/`](bringup/standard/acorn_pcie/), [`acorn_sata/`](bringup/standard/acorn_sata/),
@@ -191,6 +192,9 @@ The Mini variant is supported across the LiteX ecosystem; good entry points incl
   https://github.com/enjoy-digital/litepcie/blob/master/bench/acorn.py
 - **LiteSATA** — SATA bench on the SQRL Acorn:
   https://github.com/enjoy-digital/litesata/blob/master/bench/acorn.py
+- **HTTP Server** — gateware-only HTTP server over SFP (LiteEth + minimal TCP/HTTP responder, no
+  CPU), with a Verilator simulation reachable from the host:
+  [`bringup/mini/acorn_sfp_http_server/`](bringup/mini/acorn_sfp_http_server/)
 
 ... and more to come. :)
 
