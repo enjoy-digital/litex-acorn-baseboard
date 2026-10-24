@@ -192,6 +192,9 @@ The Mini variant is supported across the LiteX ecosystem; good entry points incl
   https://github.com/enjoy-digital/litepcie/blob/master/bench/acorn.py
 - **LiteSATA** — SATA bench on the SQRL Acorn:
   https://github.com/enjoy-digital/litesata/blob/master/bench/acorn.py
+- **HTTP Server** — gateware-only HTTP server over SFP (LiteEth + minimal TCP/HTTP responder, no
+  CPU), with a Verilator simulation reachable from the host:
+  [`bringup/mini/acorn_sfp_http_server/`](bringup/mini/acorn_sfp_http_server/)
 
 ... and more to come. :)
 
