@@ -36,4 +36,4 @@ The design can also be simulated with Verilator and reached from the host throug
 (requires root, Verilator, libevent, json-c and pythondata-misc-tapcfg):
 
 - ./sim.py
-- curl http://192.168.1.50
+- curl http[]()://192.168.1.50
